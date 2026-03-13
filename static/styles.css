@@ -11,6 +11,29 @@
   --success: #2d6a4f;
   --danger: #9f2d2d;
   --shadow: 0 18px 45px rgba(84, 54, 33, 0.12);
+  --surface: rgba(255, 255, 255, 0.72);
+  --input-bg: #fff;
+  --bg-top-glow: rgba(200, 85, 61, 0.18);
+  --bg-bottom-glow: rgba(89, 132, 116, 0.15);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171411;
+  --panel: #221c17;
+  --panel-border: #4b3d32;
+  --text: #f5eadf;
+  --muted: #c0ad9c;
+  --accent: #ef7b5d;
+  --accent-soft: #503025;
+  --secondary: #342b25;
+  --success: #79c59b;
+  --danger: #f18b8b;
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  --surface: rgba(44, 37, 31, 0.88);
+  --input-bg: #2c241e;
+  --bg-top-glow: rgba(239, 123, 93, 0.16);
+  --bg-bottom-glow: rgba(121, 197, 155, 0.12);
 }
 
 * {
@@ -23,8 +46,8 @@ body {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(200, 85, 61, 0.18), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(89, 132, 116, 0.15), transparent 32%),
+    radial-gradient(circle at top left, var(--bg-top-glow), transparent 28%),
+    radial-gradient(circle at bottom right, var(--bg-bottom-glow), transparent 32%),
     var(--bg);
 }
 
@@ -47,6 +70,16 @@ input {
   border-radius: 24px;
   box-shadow: var(--shadow);
   padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.theme-toggle {
+  min-width: 120px;
 }
 
 .hero h1,
@@ -79,7 +112,8 @@ input {
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 button {
@@ -146,7 +180,7 @@ button:disabled {
   padding: 14px;
   border: 1px solid var(--panel-border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
 }
 
 .vote-grid {
@@ -157,7 +191,7 @@ button:disabled {
 
 .vote-card {
   min-height: 72px;
-  background: #fff;
+  background: var(--input-bg);
   color: var(--text);
   border: 1px solid var(--panel-border);
 }

@@ -6,12 +6,19 @@
     <title>Scrum Poker</title>
     <script>
       window.APP_BASE_PATH = {{ base_prefix | tojson }};
+      const savedTheme = localStorage.getItem("scrum-poker:theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
     </script>
     <link rel="stylesheet" href="{{ base_prefix }}/static/styles.css" />
   </head>
   <body>
     <main class="page">
       <section class="panel">
+        <div class="topbar">
+          <button id="theme-toggle" type="button" class="secondary theme-toggle">Dark theme</button>
+        </div>
         <div class="hero">
           <p class="eyebrow">Simple Scrum Poker</p>
           <h1>Vote together in one room</h1>

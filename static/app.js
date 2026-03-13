@@ -21,6 +21,7 @@ const state = {
   viewer: null,
 };
 let roomSocket = null;
+let currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
 const authView = document.querySelector("#auth-view");
 const roomView = document.querySelector("#room-view");
@@ -39,10 +40,18 @@ const medianValue = document.querySelector("#median-value");
 const modeValue = document.querySelector("#mode-value");
 const leaderActions = document.querySelector("#leader-actions");
 const messageNode = document.querySelector("#message");
+const themeToggle = document.querySelector("#theme-toggle");
 
 const startButton = document.querySelector("#start-button");
 const revealButton = document.querySelector("#reveal-button");
 const restartButton = document.querySelector("#restart-button");
+
+function applyTheme(theme) {
+  currentTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = currentTheme;
+  localStorage.setItem("scrum-poker:theme", currentTheme);
+  themeToggle.textContent = currentTheme === "dark" ? "Light theme" : "Dark theme";
+}
 
 function roomStorageKey(roomId) {
   return `scrum-poker:${roomId}`;
@@ -366,8 +375,12 @@ joinForm.addEventListener("submit", async (event) => {
 startButton.addEventListener("click", () => leaderAction("start"));
 revealButton.addEventListener("click", () => leaderAction("reveal"));
 restartButton.addEventListener("click", () => leaderAction("restart"));
+themeToggle.addEventListener("click", () => {
+  applyTheme(currentTheme === "dark" ? "light" : "dark");
+});
 
 renderVoteOptions();
+applyTheme(currentTheme);
 restoreParticipant();
 render();
 
