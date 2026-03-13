@@ -236,6 +236,11 @@ def room_page(room_id):
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.get(f"{BASE_PREFIX}/room/<room_id>/")
+def room_page_with_slash(room_id):
+    return send_from_directory(app.static_folder, "index.html")
+
+
 @app.get(f"{BASE_PREFIX}/static/<path:filename>")
 def static_files(filename):
     return send_from_directory(app.static_folder, filename)

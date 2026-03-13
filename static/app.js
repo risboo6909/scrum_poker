@@ -2,11 +2,20 @@ const voteOptions = [1, 2, 3, 5, 8, 13, 21];
 const pollIntervalMs = 2000;
 const basePath = window.APP_BASE_PATH || "";
 const roomPathPrefix = `${basePath}/room/`;
+const currentPath = window.location.pathname;
+
+function extractRoomId(pathname) {
+  if (!pathname.startsWith(roomPathPrefix)) {
+    return null;
+  }
+
+  const rest = pathname.slice(roomPathPrefix.length);
+  const roomId = rest.split("/").filter(Boolean)[0];
+  return roomId || null;
+}
 
 const state = {
-  roomId: window.location.pathname.startsWith(roomPathPrefix)
-    ? window.location.pathname.slice(roomPathPrefix.length)
-    : null,
+  roomId: extractRoomId(currentPath),
   participantId: null,
   room: null,
   viewer: null,
