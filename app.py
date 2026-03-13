@@ -3,6 +3,7 @@ import os
 import sqlite3
 import statistics
 import threading
+import time
 import uuid
 from contextlib import closing
 
@@ -12,6 +13,8 @@ from flask_sock import Sock
 
 BASE_PATH = os.environ.get("BASE_PATH", "").strip().strip("/")
 BASE_PREFIX = f"/{BASE_PATH}" if BASE_PATH else ""
+ROOM_TTL_SECONDS = int(os.environ.get("ROOM_TTL_SECONDS", "86400"))
+MAX_ACTIVE_ROOMS = int(os.environ.get("MAX_ACTIVE_ROOMS", "10000"))
 
 app = Flask(__name__, static_folder="static", static_url_path=None)
 sock = Sock(app)
@@ -28,7 +31,9 @@ def get_db():
             CREATE TABLE rooms (
                 id TEXT PRIMARY KEY,
                 phase TEXT NOT NULL DEFAULT 'lobby',
-                round_number INTEGER NOT NULL DEFAULT 1
+                round_number INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                last_activity_at INTEGER NOT NULL
             );
 
             CREATE TABLE participants (
@@ -71,7 +76,55 @@ def remove_connection(room_id, ws):
             connections.pop(room_id, None)
 
 
+def now_ts():
+    return int(time.time())
+
+
+def expiry_cutoff():
+    return now_ts() - ROOM_TTL_SECONDS
+
+
+def cleanup_expired_rooms():
+    db = get_db()
+    expired_ids = [
+        row["id"]
+        for row in db.execute(
+            "SELECT id FROM rooms WHERE last_activity_at < ?",
+            (expiry_cutoff(),),
+        ).fetchall()
+    ]
+
+    if not expired_ids:
+        return
+
+    placeholders = ",".join("?" for _ in expired_ids)
+    db.execute(f"DELETE FROM votes WHERE room_id IN ({placeholders})", expired_ids)
+    db.execute(f"DELETE FROM participants WHERE room_id IN ({placeholders})", expired_ids)
+    db.execute(f"DELETE FROM rooms WHERE id IN ({placeholders})", expired_ids)
+    db.commit()
+
+    with connections_lock:
+        for room_id in expired_ids:
+            connections.pop(room_id, None)
+
+
+def active_room_count():
+    cleanup_expired_rooms()
+    db = get_db()
+    return db.execute("SELECT COUNT(*) FROM rooms").fetchone()[0]
+
+
+def touch_room(room_id):
+    db = get_db()
+    db.execute(
+        "UPDATE rooms SET last_activity_at = ? WHERE id = ?",
+        (now_ts(), room_id),
+    )
+    db.commit()
+
+
 def room_exists(room_id):
+    cleanup_expired_rooms()
     db = get_db()
     row = db.execute("SELECT id FROM rooms WHERE id = ?", (room_id,)).fetchone()
     return row is not None
@@ -125,6 +178,7 @@ def compute_stats(values):
 
 
 def serialize_room(room_id):
+    cleanup_expired_rooms()
     db = get_db()
     room = db.execute("SELECT * FROM rooms WHERE id = ?", (room_id,)).fetchone()
     if not room:
@@ -261,6 +315,7 @@ def room_socket(ws, room_id):
         ws.close()
         return
 
+    touch_room(room_id)
     add_connection(room_id, participant_id, ws)
 
     try:
@@ -280,12 +335,22 @@ def create_room():
     if not name:
         return error("Name is required")
 
+    if active_room_count() >= MAX_ACTIVE_ROOMS:
+        return error("Room limit reached, please try again later", 503)
+
     room_id = uuid.uuid4().hex[:8]
     participant_id = uuid.uuid4().hex
     db = get_db()
+    created_at = now_ts()
 
     with closing(db.cursor()) as cursor:
-        cursor.execute("INSERT INTO rooms (id) VALUES (?)", (room_id,))
+        cursor.execute(
+            """
+            INSERT INTO rooms (id, created_at, last_activity_at)
+            VALUES (?, ?, ?)
+            """,
+            (room_id, created_at, created_at),
+        )
         cursor.execute(
             """
             INSERT INTO participants (id, room_id, name, is_leader, joined_order)
@@ -333,6 +398,7 @@ def join_room(room_id):
         (participant_id, room_id, name, joined_order),
     )
     db.commit()
+    touch_room(room_id)
 
     response = jsonify(
         {
@@ -354,6 +420,7 @@ def get_room(room_id):
     if participant_id and not participant_in_room(room_id, participant_id):
         return error("Participant not found in room", 404)
 
+    touch_room(room_id)
     return jsonify(room_payload(room_id, participant_id))
 
 
@@ -376,6 +443,7 @@ def start_vote(room_id):
     )
     db.execute("UPDATE rooms SET phase = 'voting' WHERE id = ?", (room_id,))
     db.commit()
+    touch_room(room_id)
     broadcast_room(room_id)
     return jsonify({"room": serialize_room(room_id)})
 
@@ -410,6 +478,7 @@ def submit_vote(room_id):
         (participant_id, room_id, room["round_number"], vote_value),
     )
     db.commit()
+    touch_room(room_id)
     broadcast_room(room_id)
     return jsonify({"room": serialize_room(room_id)})
 
@@ -428,6 +497,7 @@ def reveal_votes(room_id):
     db = get_db()
     db.execute("UPDATE rooms SET phase = 'revealed' WHERE id = ?", (room_id,))
     db.commit()
+    touch_room(room_id)
     broadcast_room(room_id)
     return jsonify({"room": serialize_room(room_id)})
 
@@ -458,6 +528,7 @@ def restart_vote(room_id):
         (room_id,),
     )
     db.commit()
+    touch_room(room_id)
     broadcast_room(room_id)
     return jsonify({"room": serialize_room(room_id)})
 

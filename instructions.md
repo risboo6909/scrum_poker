@@ -49,6 +49,8 @@ Current behavior:
 - Votes are hidden until reveal.
 - After reveal, the UI shows participant votes and aggregate stats.
 - Room updates are pushed in real time over WebSocket.
+- Rooms expire automatically after inactivity.
+- Active room count is capped at 10000 by default.
 
 ## Source Of Truth
 
@@ -67,6 +69,7 @@ When making changes, keep these files aligned:
 - Keep leader-only actions restricted to the leader.
 - Do not reveal participant votes before the reveal step.
 - Keep the app functional behind a reverse proxy such as Nginx.
+- Keep room retention simple: TTL-based cleanup is preferred over complex schedulers.
 
 ## Non-Goals For Now
 
