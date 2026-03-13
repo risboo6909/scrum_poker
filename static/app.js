@@ -35,7 +35,6 @@ const phaseBadge = document.querySelector("#phase-badge");
 const roomLink = document.querySelector("#room-link");
 const viewerLabel = document.querySelector("#viewer-label");
 const voteStatus = document.querySelector("#vote-status");
-const avgValue = document.querySelector("#avg-value");
 const medianValue = document.querySelector("#median-value");
 const modeValue = document.querySelector("#mode-value");
 const leaderActions = document.querySelector("#leader-actions");
@@ -145,9 +144,13 @@ function formatPhase(phase) {
 function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
-  state.room.participants.forEach((participant) => {
+  state.room.participants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
+    if (state.room.phase === "revealed") {
+      item.classList.add("revealed");
+    }
+    item.style.setProperty("--flip-delay", `${index * 70}ms`);
 
     const title = document.createElement("strong");
     title.textContent = participant.name;
@@ -169,7 +172,26 @@ function renderParticipants() {
     labelNode.className = "pill";
     labelNode.textContent = labels.join(" / ") || "participant";
 
+    const flipCard = document.createElement("div");
+    flipCard.className = "flip-card";
+
+    const flipInner = document.createElement("div");
+    flipInner.className = "flip-card-inner";
+
+    const cardFront = document.createElement("div");
+    cardFront.className = "flip-face flip-front";
+    cardFront.textContent = "?";
+
+    const cardBack = document.createElement("div");
+    cardBack.className = "flip-face flip-back";
+    cardBack.textContent = participant.vote !== null ? String(participant.vote) : "-";
+
+    flipInner.appendChild(cardFront);
+    flipInner.appendChild(cardBack);
+    flipCard.appendChild(flipInner);
+
     item.appendChild(title);
+    item.appendChild(flipCard);
     item.appendChild(labelNode);
     item.appendChild(meta);
     participantsNode.appendChild(item);
@@ -184,7 +206,6 @@ function renderStats() {
     return;
   }
 
-  avgValue.textContent = String(stats.average);
   medianValue.textContent = String(stats.median);
   modeValue.textContent = stats.mode === null ? "-" : String(stats.mode);
 }

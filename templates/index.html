@@ -29,6 +29,11 @@
         </div>
 
         <div id="auth-view" class="stack gap-lg">
+          <section class="hero-stat">
+            <span class="muted">Rooms created since startup</span>
+            <strong>{{ total_rooms_created }}</strong>
+          </section>
+
           <form id="create-form" class="stack">
             <label for="create-name">Create room</label>
             <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
@@ -77,10 +82,6 @@
           </section>
 
           <section id="stats-panel" class="stats hidden">
-            <article>
-              <span class="muted">Average</span>
-              <strong id="avg-value">-</strong>
-            </article>
             <article>
               <span class="muted">Median</span>
               <strong id="median-value">-</strong>

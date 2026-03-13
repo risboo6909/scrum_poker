@@ -20,6 +20,7 @@ app = Flask(__name__, static_folder="static", static_url_path=None)
 sock = Sock(app)
 connections = {}
 connections_lock = threading.Lock()
+app.total_rooms_created = 0
 
 
 def get_db():
@@ -161,7 +162,6 @@ def compute_stats(values):
     if not values:
         return None
 
-    average = round(sum(values) / len(values), 2)
     median = statistics.median(values)
     modes = statistics.multimode(values)
     mode = None
@@ -171,7 +171,6 @@ def compute_stats(values):
             mode = min(modes)
 
     return {
-        "average": average,
         "median": median,
         "mode": mode,
     }
@@ -275,7 +274,11 @@ def error(message, code=400):
 
 
 def render_index():
-    return render_template("index.html", base_prefix=BASE_PREFIX)
+    return render_template(
+        "index.html",
+        base_prefix=BASE_PREFIX,
+        total_rooms_created=app.total_rooms_created,
+    )
 
 
 @app.get(f"{BASE_PREFIX}/")
@@ -359,6 +362,7 @@ def create_room():
             (participant_id, room_id, name),
         )
         db.commit()
+        app.total_rooms_created += 1
 
     response = jsonify(
         {
