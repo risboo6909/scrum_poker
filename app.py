@@ -6,7 +6,7 @@ import threading
 import uuid
 from contextlib import closing
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sock import Sock
 
 
@@ -220,25 +220,29 @@ def error(message, code=400):
     return jsonify({"error": message}), code
 
 
+def render_index():
+    return render_template("index.html", base_prefix=BASE_PREFIX)
+
+
 @app.get(f"{BASE_PREFIX}/")
 def index():
-    return send_from_directory(app.static_folder, "index.html")
+    return render_index()
 
 
 if BASE_PREFIX:
     @app.get(f"{BASE_PREFIX}")
     def index_without_slash():
-        return send_from_directory(app.static_folder, "index.html")
+        return render_index()
 
 
 @app.get(f"{BASE_PREFIX}/room/<room_id>")
 def room_page(room_id):
-    return send_from_directory(app.static_folder, "index.html")
+    return render_index()
 
 
 @app.get(f"{BASE_PREFIX}/room/<room_id>/")
 def room_page_with_slash(room_id):
-    return send_from_directory(app.static_folder, "index.html")
+    return render_index()
 
 
 @app.get(f"{BASE_PREFIX}/static/<path:filename>")

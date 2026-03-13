@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scrum Poker</title>
     <script>
-      const segments = window.location.pathname.split("/").filter(Boolean);
-      const reserved = new Set(["room", "api", "ws", "static"]);
-      window.APP_BASE_PATH =
-        segments.length > 0 && !reserved.has(segments[0]) ? `/${segments[0]}` : "";
+      window.APP_BASE_PATH = {{ base_prefix | tojson }};
     </script>
-    <link rel="stylesheet" href="" id="app-stylesheet" />
+    <link rel="stylesheet" href="{{ base_prefix }}/static/styles.css" />
   </head>
   <body>
     <main class="page">
@@ -92,12 +89,6 @@
       </section>
     </main>
 
-    <script>
-      document.getElementById("app-stylesheet").href = `${window.APP_BASE_PATH}/static/styles.css`;
-    </script>
-    <script src="" id="app-script"></script>
-    <script>
-      document.getElementById("app-script").src = `${window.APP_BASE_PATH}/static/app.js`;
-    </script>
+    <script src="{{ base_prefix }}/static/app.js"></script>
   </body>
   </html>
