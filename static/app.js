@@ -1,9 +1,11 @@
 const voteOptions = [1, 2, 3, 5, 8, 13, 21];
 const pollIntervalMs = 2000;
+const basePath = window.APP_BASE_PATH || "";
+const roomPathPrefix = `${basePath}/room/`;
 
 const state = {
-  roomId: window.location.pathname.startsWith("/room/")
-    ? window.location.pathname.split("/").pop()
+  roomId: window.location.pathname.startsWith(roomPathPrefix)
+    ? window.location.pathname.slice(roomPathPrefix.length)
     : null,
   participantId: null,
   room: null,
@@ -54,7 +56,7 @@ function updateStateFromPayload(payload) {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
+  const response = await fetch(`${basePath}${path}`, {
     headers: {
       "Content-Type": "application/json",
     },
@@ -223,7 +225,7 @@ function render() {
   roomView.classList.remove("hidden");
 
   phaseBadge.textContent = formatPhase(state.room.phase);
-  roomLink.textContent = `${window.location.origin}/room/${state.roomId}`;
+  roomLink.textContent = `${window.location.origin}${basePath}/room/${state.roomId}`;
   roomLink.href = roomLink.textContent;
   viewerLabel.textContent = state.viewer?.name
     ? `${state.viewer.name}${state.viewer.isLeader ? " (leader)" : ""}`
@@ -260,7 +262,7 @@ function connectRoomSocket() {
   }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const url = `${protocol}//${window.location.host}/ws/rooms/${state.roomId}?participantId=${encodeURIComponent(state.participantId)}`;
+  const url = `${protocol}//${window.location.host}${basePath}/ws/rooms/${state.roomId}?participantId=${encodeURIComponent(state.participantId)}`;
 
   roomSocket = new WebSocket(url);
   roomSocket.addEventListener("message", (event) => {
@@ -292,7 +294,7 @@ async function createRoom(name) {
     currentVote: null,
   };
   persistParticipant();
-  window.history.replaceState({}, "", `/room/${state.roomId}`);
+  window.history.replaceState({}, "", `${basePath}/room/${state.roomId}`);
   render();
   connectRoomSocket();
 }

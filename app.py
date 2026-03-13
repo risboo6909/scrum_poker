@@ -10,7 +10,10 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_sock import Sock
 
 
-app = Flask(__name__, static_folder="static", static_url_path="/static")
+BASE_PATH = os.environ.get("BASE_PATH", "").strip().strip("/")
+BASE_PREFIX = f"/{BASE_PATH}" if BASE_PATH else ""
+
+app = Flask(__name__, static_folder="static", static_url_path=None)
 sock = Sock(app)
 connections = {}
 connections_lock = threading.Lock()
@@ -217,17 +220,28 @@ def error(message, code=400):
     return jsonify({"error": message}), code
 
 
-@app.get("/")
+@app.get(f"{BASE_PREFIX}/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
-@app.get("/room/<room_id>")
+if BASE_PREFIX:
+    @app.get(f"{BASE_PREFIX}")
+    def index_without_slash():
+        return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get(f"{BASE_PREFIX}/room/<room_id>")
 def room_page(room_id):
     return send_from_directory(app.static_folder, "index.html")
 
 
-@sock.route("/ws/rooms/<room_id>")
+@app.get(f"{BASE_PREFIX}/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory(app.static_folder, filename)
+
+
+@sock.route(f"{BASE_PREFIX}/ws/rooms/<room_id>")
 def room_socket(ws, room_id):
     if not room_exists(room_id):
         ws.close()
@@ -250,7 +264,7 @@ def room_socket(ws, room_id):
         remove_connection(room_id, ws)
 
 
-@app.post("/api/rooms")
+@app.post(f"{BASE_PREFIX}/api/rooms")
 def create_room():
     payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
@@ -283,7 +297,7 @@ def create_room():
     return response
 
 
-@app.post("/api/rooms/<room_id>/join")
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/join")
 def join_room(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
@@ -322,7 +336,7 @@ def join_room(room_id):
     return response
 
 
-@app.get("/api/rooms/<room_id>")
+@app.get(f"{BASE_PREFIX}/api/rooms/<room_id>")
 def get_room(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
@@ -334,7 +348,7 @@ def get_room(room_id):
     return jsonify(room_payload(room_id, participant_id))
 
 
-@app.post("/api/rooms/<room_id>/start")
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/start")
 def start_vote(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
@@ -357,7 +371,7 @@ def start_vote(room_id):
     return jsonify({"room": serialize_room(room_id)})
 
 
-@app.post("/api/rooms/<room_id>/vote")
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/vote")
 def submit_vote(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
@@ -391,7 +405,7 @@ def submit_vote(room_id):
     return jsonify({"room": serialize_room(room_id)})
 
 
-@app.post("/api/rooms/<room_id>/reveal")
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/reveal")
 def reveal_votes(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
@@ -409,7 +423,7 @@ def reveal_votes(room_id):
     return jsonify({"room": serialize_room(room_id)})
 
 
-@app.post("/api/rooms/<room_id>/restart")
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/restart")
 def restart_vote(room_id):
     if not room_exists(room_id):
         return error("Room not found", 404)
