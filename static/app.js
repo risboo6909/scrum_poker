@@ -226,6 +226,7 @@ function render() {
   if (!state.room) {
     authView.classList.remove("hidden");
     roomView.classList.add("hidden");
+    createForm.classList.toggle("hidden", !!state.roomId);
     joinForm.classList.toggle("hidden", !state.roomId);
     return;
   }
