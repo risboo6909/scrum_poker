@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scrum Poker</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <div class="hero">
+          <p class="eyebrow">Simple Scrum Poker</p>
+          <h1>Vote together in one room</h1>
+          <p class="subtle">
+            Leader creates a room, shares the link, starts voting, reveals cards
+            and restarts the round when needed.
+          </p>
+        </div>
+
+        <div id="auth-view" class="stack gap-lg">
+          <form id="create-form" class="stack">
+            <label for="create-name">Create room</label>
+            <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
+            <button type="submit">Create room</button>
+          </form>
+
+          <form id="join-form" class="stack hidden">
+            <label for="join-name">Join room</label>
+            <input id="join-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
+            <button type="submit">Join room</button>
+          </form>
+        </div>
+
+        <div id="room-view" class="stack gap-lg hidden">
+          <div class="room-topbar">
+            <div>
+              <p class="muted">Room link</p>
+              <a id="room-link" href="#" target="_blank" rel="noreferrer"></a>
+            </div>
+            <div>
+              <p class="muted">Status</p>
+              <strong id="phase-badge" class="badge">Lobby</strong>
+            </div>
+          </div>
+
+          <div id="leader-actions" class="actions hidden">
+            <button id="start-button" type="button">Start vote</button>
+            <button id="reveal-button" type="button" class="secondary">Reveal cards</button>
+            <button id="restart-button" type="button" class="secondary">Restart</button>
+          </div>
+
+          <section class="stack">
+            <div class="section-header">
+              <h2>Participants</h2>
+              <span id="viewer-label" class="muted"></span>
+            </div>
+            <div id="participants" class="participants"></div>
+          </section>
+
+          <section id="vote-panel" class="stack hidden">
+            <div class="section-header">
+              <h2>Your vote</h2>
+              <span id="vote-status" class="muted"></span>
+            </div>
+            <div id="vote-options" class="vote-grid"></div>
+          </section>
+
+          <section id="stats-panel" class="stats hidden">
+            <article>
+              <span class="muted">Average</span>
+              <strong id="avg-value">-</strong>
+            </article>
+            <article>
+              <span class="muted">Median</span>
+              <strong id="median-value">-</strong>
+            </article>
+            <article>
+              <span class="muted">Mode</span>
+              <strong id="mode-value">-</strong>
+            </article>
+          </section>
+
+          <p id="message" class="message hidden"></p>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+  </html>
