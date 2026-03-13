@@ -1,20 +1,20 @@
 # Scrum Poker
 
-Простой Scrum Poker на JavaScript-фронтенде и Python-бэкенде с обновлениями через WebSocket.
+A simple Scrum Poker app with a JavaScript frontend, a Python backend, and real-time updates over WebSocket.
 
-## Что есть
+## Features
 
-- создание комнаты лидером с выдачей URL
-- подключение участников по ссылке
-- запуск голосования лидером
-- скрытые голоса до `Reveal cards`
-- показ голосов, среднего, медианы и моды
-- `Restart` для нового раунда
-- синхронизация комнаты в реальном времени через WebSocket
-- комнаты протухают по TTL и очищаются лениво при запросах
-- одновременно может существовать не более 10000 активных комнат
+- room creation by a leader with a shareable URL
+- participant join flow by room link
+- leader-controlled voting start
+- hidden votes until `Reveal cards`
+- participant votes plus average, median, and mode after reveal
+- `Restart` for a new round
+- real-time room synchronization over WebSocket
+- rooms expire by TTL and are cleaned up lazily on requests
+- no more than 10000 active rooms at the same time
 
-## Локальный запуск
+## Local Run
 
 ```bash
 python -m venv .venv
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-По умолчанию приложение доступно на `http://localhost:8000/poker/`.
+By default, the app is available at `http://localhost:8000/poker/`.
 
 ## Docker
 
@@ -32,16 +32,16 @@ docker build -t scrum-poker .
 docker run --rm -p 8000:8000 scrum-poker
 ```
 
-Если приложение должно жить под путём, а не в корне, передай `BASE_PATH`:
+If the app should live under a path prefix instead of the domain root, pass `BASE_PATH`:
 
 ```bash
 docker run --rm -e PORT=8000 -e BASE_PATH=/poker -p 8000:8000 scrum-poker
 ```
 
-Дополнительные env-переменные:
+Additional environment variables:
 
-- `ROOM_TTL_SECONDS` — TTL комнаты в секундах, по умолчанию `86400`
-- `MAX_ACTIVE_ROOMS` — максимум активных комнат, по умолчанию `10000`
+- `ROOM_TTL_SECONDS` — room TTL in seconds, default `86400`
+- `MAX_ACTIVE_ROOMS` — maximum active room count, default `10000`
 
 ## Docker Compose
 
@@ -51,7 +51,7 @@ docker compose up --build
 
 ## Nginx Path Proxy
 
-Для проксирования через Nginx по пути `/poker`:
+To proxy the app through Nginx under `/poker`:
 
 ```nginx
 location = /poker {
@@ -70,7 +70,7 @@ location /poker/ {
 }
 ```
 
-Если нужен другой порт внутри контейнера:
+If you need a different port inside the container:
 
 ```bash
 docker run --rm -e PORT=8080 -p 8080:8080 scrum-poker
