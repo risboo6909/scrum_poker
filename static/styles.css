@@ -191,6 +191,8 @@ button:disabled {
 
 .flip-card {
   perspective: 1000px;
+  overflow: hidden;
+  border-radius: 16px;
 }
 
 .flip-card-inner {
@@ -224,6 +226,7 @@ button:disabled {
 }
 
 .flip-front {
+  transform: rotateY(0deg) translateZ(1px);
   background:
     linear-gradient(135deg, var(--accent-soft), transparent),
     var(--input-bg);
@@ -234,7 +237,7 @@ button:disabled {
 .flip-back {
   background: var(--accent);
   color: #fff;
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(1px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
 }
 
