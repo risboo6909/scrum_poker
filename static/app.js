@@ -22,6 +22,7 @@ const state = {
 };
 let roomSocket = null;
 let currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+let lastRenderedPhase = null;
 
 const authView = document.querySelector("#auth-view");
 const roomView = document.querySelector("#room-view");
@@ -144,12 +145,11 @@ function formatPhase(phase) {
 function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
+  const shouldAnimateReveal = lastRenderedPhase !== "revealed" && state.room.phase === "revealed";
+
   state.room.participants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
-    if (state.room.phase === "revealed") {
-      item.classList.add("revealed");
-    }
     item.style.setProperty("--flip-delay", `${index * 70}ms`);
 
     const title = document.createElement("strong");
@@ -195,6 +195,16 @@ function renderParticipants() {
     item.appendChild(labelNode);
     item.appendChild(meta);
     participantsNode.appendChild(item);
+
+    if (state.room.phase === "revealed") {
+      if (shouldAnimateReveal) {
+        requestAnimationFrame(() => {
+          item.classList.add("revealed");
+        });
+      } else {
+        item.classList.add("revealed");
+      }
+    }
   });
 }
 
@@ -258,6 +268,7 @@ function render() {
     roomView.classList.add("hidden");
     createForm.classList.toggle("hidden", !!state.roomId);
     joinForm.classList.toggle("hidden", !state.roomId);
+    lastRenderedPhase = null;
     return;
   }
 
@@ -275,6 +286,7 @@ function render() {
   renderLeaderControls();
   renderVotePanel();
   renderStats();
+  lastRenderedPhase = state.room.phase;
 }
 
 async function refreshRoom() {

@@ -29,11 +29,6 @@
         </div>
 
         <div id="auth-view" class="stack gap-lg">
-          <section class="hero-stat">
-            <span class="muted">Rooms created since startup</span>
-            <strong>{{ total_rooms_created }}</strong>
-          </section>
-
           <form id="create-form" class="stack">
             <label for="create-name">Create room</label>
             <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
@@ -45,6 +40,8 @@
             <input id="join-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
             <button type="submit">Join room</button>
           </form>
+
+          <p class="startup-stat muted">Rooms created since startup: {{ total_rooms_created }}</p>
         </div>
 
         <div id="room-view" class="stack gap-lg hidden">
