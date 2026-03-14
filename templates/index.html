@@ -39,7 +39,7 @@
               {% endfor %}
             </select>
             <p id="create-deck-hint" class="muted deck-hint">
-              {{ decks | list | first.description }}
+              {{ (decks | list | first).description }}
             </p>
             <button type="submit">Create room</button>
           </form>
