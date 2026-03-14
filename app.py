@@ -77,6 +77,12 @@ def remove_connection(room_id, ws):
             connections.pop(room_id, None)
 
 
+def online_participant_ids(room_id):
+    with connections_lock:
+        room_connections = connections.get(room_id, [])
+        return {entry["participant_id"] for entry in room_connections}
+
+
 def now_ts():
     return int(time.time())
 
@@ -184,6 +190,7 @@ def serialize_room(room_id):
     room = db.execute("SELECT * FROM rooms WHERE id = ?", (room_id,)).fetchone()
     if not room:
         return None
+    online_ids = online_participant_ids(room_id)
 
     participants = db.execute(
         """
@@ -216,6 +223,7 @@ def serialize_room(room_id):
                 "id": participant["id"],
                 "name": participant["name"],
                 "isLeader": bool(participant["is_leader"]),
+                "isOnline": participant["id"] in online_ids,
                 "hasVoted": has_vote,
                 "vote": vote_value if room["phase"] == "revealed" else None,
             }
@@ -322,6 +330,7 @@ def room_socket(ws, room_id):
 
     touch_room(room_id)
     add_connection(room_id, participant_id, ws)
+    broadcast_room(room_id)
 
     try:
         ws.send(json.dumps(room_payload(room_id, participant_id)))
@@ -331,6 +340,7 @@ def room_socket(ws, room_id):
                 break
     finally:
         remove_connection(room_id, ws)
+        broadcast_room(room_id)
 
 
 @app.post(f"{BASE_PREFIX}/api/rooms")

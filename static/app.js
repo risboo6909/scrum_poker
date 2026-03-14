@@ -207,9 +207,12 @@ function formatPhase(phase) {
 function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
+  const visibleParticipants = state.room.participants.filter(
+    (participant) => participant.isOnline || participant.id === state.participantId
+  );
   const shouldAnimateReveal = lastRenderedPhase !== "revealed" && state.room.phase === "revealed";
 
-  state.room.participants.forEach((participant, index) => {
+  visibleParticipants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
     item.style.setProperty("--flip-delay", `${index * 70}ms`);
