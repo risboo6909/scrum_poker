@@ -23,6 +23,7 @@ const state = {
 let roomSocket = null;
 let currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 let lastRenderedPhase = null;
+let confettiTimeoutId = null;
 
 const authView = document.querySelector("#auth-view");
 const roomView = document.querySelector("#room-view");
@@ -45,6 +46,7 @@ const themeToggle = document.querySelector("#theme-toggle");
 const startButton = document.querySelector("#start-button");
 const revealButton = document.querySelector("#reveal-button");
 const restartButton = document.querySelector("#restart-button");
+const panelNode = document.querySelector(".panel");
 
 function applyTheme(theme) {
   currentTheme = theme === "dark" ? "dark" : "light";
@@ -65,6 +67,52 @@ function setMessage(text, isError = false) {
 
 function clearMessage() {
   setMessage("");
+}
+
+function clearConfetti() {
+  const existing = document.querySelector(".confetti-layer");
+  if (existing) {
+    existing.remove();
+  }
+  if (confettiTimeoutId) {
+    clearTimeout(confettiTimeoutId);
+    confettiTimeoutId = null;
+  }
+}
+
+function launchConfetti() {
+  clearConfetti();
+
+  const layer = document.createElement("div");
+  layer.className = "confetti-layer";
+  const colors = ["#ef7b5d", "#79c59b", "#f4c95d", "#5d8bef", "#f08bd2"];
+
+  for (let index = 0; index < 36; index += 1) {
+    const piece = document.createElement("span");
+    piece.className = "confetti-piece";
+    const fromLeft = index % 2 === 0;
+    piece.classList.add(fromLeft ? "from-left" : "from-right");
+    piece.style.left = fromLeft ? "34px" : "auto";
+    piece.style.right = fromLeft ? "auto" : "34px";
+    piece.style.bottom = "20px";
+    piece.style.background = colors[index % colors.length];
+    const horizontal = fromLeft
+      ? 80 + Math.random() * 220
+      : -(80 + Math.random() * 220);
+    const vertical = -(160 + Math.random() * 190);
+    piece.style.setProperty("--confetti-x", `${horizontal}px`);
+    piece.style.setProperty("--confetti-y", `${vertical}px`);
+    piece.style.setProperty("--confetti-rotate", `${Math.random() * 720 - 360}deg`);
+    piece.style.animationDelay = `${Math.random() * 120}ms`;
+    piece.style.animationDuration = `${950 + Math.random() * 450}ms`;
+    layer.appendChild(piece);
+  }
+
+  panelNode.appendChild(layer);
+  confettiTimeoutId = window.setTimeout(() => {
+    layer.remove();
+    confettiTimeoutId = null;
+  }, 1900);
 }
 
 function updateStateFromPayload(payload) {
@@ -268,6 +316,7 @@ function render() {
     roomView.classList.add("hidden");
     createForm.classList.toggle("hidden", !!state.roomId);
     joinForm.classList.toggle("hidden", !state.roomId);
+    clearConfetti();
     lastRenderedPhase = null;
     return;
   }
@@ -286,6 +335,15 @@ function render() {
   renderLeaderControls();
   renderVotePanel();
   renderStats();
+
+  if (
+    lastRenderedPhase !== "revealed" &&
+    state.room.phase === "revealed" &&
+    state.room.stats?.mode !== null
+  ) {
+    launchConfetti();
+  }
+
   lastRenderedPhase = state.room.phase;
 }
 
