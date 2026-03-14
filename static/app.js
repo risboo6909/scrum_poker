@@ -35,6 +35,7 @@ const voteOptionsNode = document.querySelector("#vote-options");
 const statsPanel = document.querySelector("#stats-panel");
 const phaseBadge = document.querySelector("#phase-badge");
 const roomLink = document.querySelector("#room-link");
+const copyRoomLinkButton = document.querySelector("#copy-room-link");
 const viewerLabel = document.querySelector("#viewer-label");
 const voteStatus = document.querySelector("#vote-status");
 const medianValue = document.querySelector("#median-value");
@@ -66,6 +67,20 @@ function setMessage(text, isError = false) {
 
 function clearMessage() {
   setMessage("");
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const tempInput = document.createElement("input");
+  tempInput.value = text;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand("copy");
+  tempInput.remove();
 }
 
 function clearConfetti() {
@@ -465,6 +480,14 @@ startButton.addEventListener("click", () => leaderAction("start"));
 revealButton.addEventListener("click", () => leaderAction("reveal"));
 themeToggle.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
+});
+copyRoomLinkButton.addEventListener("click", async () => {
+  try {
+    await copyText(roomLink.href);
+    setMessage("Room link copied");
+  } catch {
+    setMessage("Could not copy room link", true);
+  }
 });
 
 renderVoteOptions();

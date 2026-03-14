@@ -176,6 +176,18 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.room-link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.copy-link-button {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
 .actions {
   justify-content: flex-start;
 }
