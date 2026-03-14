@@ -163,6 +163,7 @@ def compute_stats(values):
         return None
 
     median = statistics.median(values)
+    unanimous = len(set(values)) == 1
     modes = statistics.multimode(values)
     mode = None
     if modes:
@@ -173,6 +174,7 @@ def compute_stats(values):
     return {
         "median": median,
         "mode": mode,
+        "unanimous": unanimous,
     }
 
 

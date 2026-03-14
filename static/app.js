@@ -337,7 +337,7 @@ function render() {
   if (
     lastRenderedPhase !== "revealed" &&
     state.room.phase === "revealed" &&
-    state.room.stats?.mode !== null
+    state.room.stats?.unanimous
   ) {
     launchConfetti();
   }
