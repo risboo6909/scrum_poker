@@ -115,6 +115,24 @@ form {
   letter-spacing: 0.01em;
 }
 
+.author-note {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.author-note a {
+  text-decoration: none;
+}
+
+.author-note a:hover {
+  text-decoration: underline;
+}
+
 input {
   width: 100%;
   border: 1px solid var(--panel-border);
