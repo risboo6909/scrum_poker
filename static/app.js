@@ -45,7 +45,6 @@ const themeToggle = document.querySelector("#theme-toggle");
 
 const startButton = document.querySelector("#start-button");
 const revealButton = document.querySelector("#reveal-button");
-const restartButton = document.querySelector("#restart-button");
 const panelNode = document.querySelector(".panel");
 
 function applyTheme(theme) {
@@ -99,7 +98,7 @@ function launchConfetti() {
     const horizontal = fromLeft
       ? 80 + Math.random() * 220
       : -(80 + Math.random() * 220);
-    const vertical = -(160 + Math.random() * 190);
+    const vertical = -(260 + Math.random() * 300);
     piece.style.setProperty("--confetti-x", `${horizontal}px`);
     piece.style.setProperty("--confetti-y", `${vertical}px`);
     piece.style.setProperty("--confetti-rotate", `${Math.random() * 720 - 360}deg`);
@@ -277,7 +276,6 @@ function renderLeaderControls() {
 
   startButton.disabled = state.room.phase === "voting";
   revealButton.disabled = state.room.phase !== "voting";
-  restartButton.disabled = state.room.phase !== "revealed";
 }
 
 function renderVotePanel() {
@@ -465,7 +463,6 @@ joinForm.addEventListener("submit", async (event) => {
 
 startButton.addEventListener("click", () => leaderAction("start"));
 revealButton.addEventListener("click", () => leaderAction("reveal"));
-restartButton.addEventListener("click", () => leaderAction("restart"));
 themeToggle.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
