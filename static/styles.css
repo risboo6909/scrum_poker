@@ -52,7 +52,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -133,13 +134,19 @@ form {
   text-decoration: underline;
 }
 
-input {
+input,
+select {
   width: 100%;
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 12px 14px;
   background: var(--input-bg);
   color: var(--text);
+}
+
+.deck-hint {
+  margin: -2px 0 2px;
+  font-size: 0.9rem;
 }
 
 button {

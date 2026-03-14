@@ -15,6 +15,20 @@ BASE_PATH = os.environ.get("BASE_PATH", "").strip().strip("/")
 BASE_PREFIX = f"/{BASE_PATH}" if BASE_PATH else ""
 ROOM_TTL_SECONDS = int(os.environ.get("ROOM_TTL_SECONDS", "86400"))
 MAX_ACTIVE_ROOMS = int(os.environ.get("MAX_ACTIVE_ROOMS", "10000"))
+DECKS = {
+    "fibonacci": {
+        "id": "fibonacci",
+        "label": "Fibonacci",
+        "description": "Classic Scrum Poker story points.",
+        "options": [1, 2, 3, 5, 8, 13, 21],
+    },
+    "pu": {
+        "id": "pu",
+        "label": "PU",
+        "description": "Preliminary Units, where 0.5 PU = 4 working hours.",
+        "options": [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8],
+    },
+}
 
 app = Flask(__name__, static_folder="static", static_url_path=None)
 sock = Sock(app)
@@ -33,6 +47,7 @@ def get_db():
                 id TEXT PRIMARY KEY,
                 phase TEXT NOT NULL DEFAULT 'lobby',
                 round_number INTEGER NOT NULL DEFAULT 1,
+                deck TEXT NOT NULL DEFAULT 'fibonacci',
                 created_at INTEGER NOT NULL,
                 last_activity_at INTEGER NOT NULL
             );
@@ -145,6 +160,61 @@ def participant_in_room(room_id, participant_id):
     ).fetchone()
 
 
+def remove_participant(room_id, participant_id):
+    db = get_db()
+    db.execute(
+        "DELETE FROM votes WHERE room_id = ? AND participant_id = ?",
+        (room_id, participant_id),
+    )
+    db.execute(
+        "DELETE FROM participants WHERE room_id = ? AND id = ?",
+        (room_id, participant_id),
+    )
+    db.commit()
+
+
+def prune_inactive_participants(room_id, keep_voted):
+    db = get_db()
+    room = db.execute(
+        "SELECT round_number FROM rooms WHERE id = ?",
+        (room_id,),
+    ).fetchone()
+    if not room:
+        return
+
+    online_ids = online_participant_ids(room_id)
+    participants = db.execute(
+        """
+        SELECT
+            p.id,
+            p.is_leader,
+            EXISTS(
+                SELECT 1
+                FROM votes v
+                WHERE v.room_id = p.room_id
+                    AND v.participant_id = p.id
+                    AND v.round_number = ?
+            ) AS has_vote
+        FROM participants p
+        WHERE p.room_id = ?
+        """,
+        (room["round_number"], room_id),
+    ).fetchall()
+
+    removable_ids = []
+    for participant in participants:
+        if participant["id"] in online_ids:
+            continue
+        if participant["is_leader"]:
+            continue
+        if keep_voted and participant["has_vote"]:
+            continue
+        removable_ids.append(participant["id"])
+
+    for participant_id in removable_ids:
+        remove_participant(room_id, participant_id)
+
+
 def require_leader(room_id, participant_id):
     participant = participant_in_room(room_id, participant_id)
     if not participant or not participant["is_leader"]:
@@ -157,11 +227,21 @@ def parse_vote_value(raw_value):
         value = float(raw_value)
     except (TypeError, ValueError):
         return None
+    return value
 
-    if not value.is_integer():
-        return None
 
-    return int(value)
+def serialize_value(value):
+    if float(value).is_integer():
+        return int(value)
+    return float(value)
+
+
+def normalize_vote_value(value):
+    return int(value * 2)
+
+
+def room_deck(deck_id):
+    return DECKS.get(deck_id, DECKS["fibonacci"])
 
 
 def compute_stats(values):
@@ -178,8 +258,8 @@ def compute_stats(values):
             mode = min(modes)
 
     return {
-        "median": median,
-        "mode": mode,
+        "median": serialize_value(median),
+        "mode": serialize_value(mode) if mode is not None else None,
         "unanimous": unanimous,
     }
 
@@ -191,6 +271,7 @@ def serialize_room(room_id):
     if not room:
         return None
     online_ids = online_participant_ids(room_id)
+    deck = room_deck(room["deck"])
 
     participants = db.execute(
         """
@@ -214,7 +295,7 @@ def serialize_room(room_id):
     serialized_participants = []
     for participant in participants:
         has_vote = participant["value"] is not None
-        vote_value = int(participant["value"]) if has_vote else None
+        vote_value = serialize_value(participant["value"]) if has_vote else None
         if room["phase"] == "revealed" and has_vote:
             revealed_values.append(vote_value)
 
@@ -233,6 +314,7 @@ def serialize_room(room_id):
         "id": room["id"],
         "phase": room["phase"],
         "roundNumber": room["round_number"],
+        "deck": deck,
         "participants": serialized_participants,
         "stats": compute_stats(revealed_values) if room["phase"] == "revealed" else None,
     }
@@ -251,7 +333,7 @@ def get_viewer(room_id, participant_id):
             """,
             (room_id, participant_id),
         ).fetchone()
-        viewer_vote = int(viewer_vote_row["value"]) if viewer_vote_row else None
+        viewer_vote = serialize_value(viewer_vote_row["value"]) if viewer_vote_row else None
 
     return {
         "participantId": participant["id"] if participant else None,
@@ -287,6 +369,7 @@ def render_index():
     return render_template(
         "index.html",
         base_prefix=BASE_PREFIX,
+        decks=DECKS.values(),
         total_rooms_created=app.total_rooms_created,
     )
 
@@ -340,6 +423,7 @@ def room_socket(ws, room_id):
                 break
     finally:
         remove_connection(room_id, ws)
+        prune_inactive_participants(room_id, keep_voted=True)
         broadcast_room(room_id)
 
 
@@ -347,8 +431,11 @@ def room_socket(ws, room_id):
 def create_room():
     payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
+    deck_id = (payload.get("deck") or "fibonacci").strip().lower()
     if not name:
         return error("Name is required")
+    if deck_id not in DECKS:
+        return error("Unknown voting deck")
 
     if active_room_count() >= MAX_ACTIVE_ROOMS:
         return error("Room limit reached, please try again later", 503)
@@ -361,10 +448,10 @@ def create_room():
     with closing(db.cursor()) as cursor:
         cursor.execute(
             """
-            INSERT INTO rooms (id, created_at, last_activity_at)
-            VALUES (?, ?, ?)
+            INSERT INTO rooms (id, deck, created_at, last_activity_at)
+            VALUES (?, ?, ?, ?)
             """,
-            (room_id, created_at, created_at),
+            (room_id, deck_id, created_at, created_at),
         )
         cursor.execute(
             """
@@ -451,6 +538,7 @@ def start_vote(room_id):
     if leader_error:
         return leader_error
 
+    prune_inactive_participants(room_id, keep_voted=False)
     db = get_db()
     room = db.execute("SELECT round_number FROM rooms WHERE id = ?", (room_id,)).fetchone()
     db.execute(
@@ -477,12 +565,21 @@ def submit_vote(room_id):
 
     vote_value = parse_vote_value(payload.get("value"))
     if vote_value is None:
-        return error("Vote must be an integer")
+        return error("Vote must be a number")
 
     db = get_db()
-    room = db.execute("SELECT phase, round_number FROM rooms WHERE id = ?", (room_id,)).fetchone()
+    room = db.execute(
+        "SELECT phase, round_number, deck FROM rooms WHERE id = ?",
+        (room_id,),
+    ).fetchone()
     if room["phase"] != "voting":
         return error("Voting has not started")
+
+    allowed_votes = {
+        normalize_vote_value(option) for option in room_deck(room["deck"])["options"]
+    }
+    if normalize_vote_value(vote_value) not in allowed_votes:
+        return error("Vote is not available in this room's deck")
 
     db.execute(
         """

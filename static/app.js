@@ -1,4 +1,3 @@
-const voteOptions = [1, 2, 3, 5, 8, 13, 21];
 const pollIntervalMs = 2000;
 const basePath = window.APP_BASE_PATH || "";
 const roomPathPrefix = `${basePath}/room/`;
@@ -29,6 +28,8 @@ const authView = document.querySelector("#auth-view");
 const roomView = document.querySelector("#room-view");
 const createForm = document.querySelector("#create-form");
 const joinForm = document.querySelector("#join-form");
+const createDeckSelect = document.querySelector("#create-deck");
+const createDeckHint = document.querySelector("#create-deck-hint");
 const participantsNode = document.querySelector("#participants");
 const votePanel = document.querySelector("#vote-panel");
 const voteOptionsNode = document.querySelector("#vote-options");
@@ -167,6 +168,7 @@ function restoreParticipant() {
 function renderVoteOptions() {
   voteOptionsNode.innerHTML = "";
   const currentVote = state.viewer?.currentVote ?? null;
+  const voteOptions = state.room?.deck?.options || [];
 
   voteOptions.forEach((value) => {
     const button = document.createElement("button");
@@ -194,6 +196,14 @@ function renderVoteOptions() {
   });
 }
 
+function updateCreateDeckHint() {
+  const selectedOption = createDeckSelect?.selectedOptions?.[0];
+  if (!selectedOption || !createDeckHint) {
+    return;
+  }
+  createDeckHint.textContent = selectedOption.dataset.description || "";
+}
+
 function currentParticipant() {
   return state.room?.participants.find((participant) => participant.id === state.participantId);
 }
@@ -208,7 +218,11 @@ function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
   const visibleParticipants = state.room.participants.filter(
-    (participant) => participant.isOnline || participant.id === state.participantId
+    (participant) =>
+      participant.isOnline ||
+      participant.hasVoted ||
+      state.room.phase === "revealed" ||
+      participant.id === state.participantId
   );
   const shouldAnimateReveal = lastRenderedPhase !== "revealed" && state.room.phase === "revealed";
 
@@ -351,6 +365,7 @@ function render() {
   renderLeaderControls();
   renderVotePanel();
   renderStats();
+  renderVoteOptions();
 
   if (
     lastRenderedPhase !== "revealed" &&
@@ -405,10 +420,10 @@ function connectRoomSocket() {
   });
 }
 
-async function createRoom(name) {
+async function createRoom(name, deck) {
   const data = await api("/api/rooms", {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, deck }),
   });
   state.roomId = data.roomId;
   state.participantId = data.participantId;
@@ -462,7 +477,10 @@ createForm.addEventListener("submit", async (event) => {
   const formData = new FormData(createForm);
   try {
     clearMessage();
-    await createRoom((formData.get("name") || "").toString().trim());
+    await createRoom(
+      (formData.get("name") || "").toString().trim(),
+      (formData.get("deck") || "fibonacci").toString()
+    );
   } catch (error) {
     setMessage(error.message, true);
   }
@@ -484,6 +502,7 @@ revealButton.addEventListener("click", () => leaderAction("reveal"));
 themeToggle.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
+createDeckSelect?.addEventListener("change", updateCreateDeckHint);
 copyRoomLinkButton.addEventListener("click", async () => {
   try {
     await copyText(roomLink.href);
@@ -493,7 +512,7 @@ copyRoomLinkButton.addEventListener("click", async () => {
   }
 });
 
-renderVoteOptions();
+updateCreateDeckHint();
 applyTheme(currentTheme);
 restoreParticipant();
 render();
