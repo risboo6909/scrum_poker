@@ -2,6 +2,8 @@
 
 A simple Scrum Poker app with a JavaScript frontend, a Python backend, and real-time updates over WebSocket.
 
+Take a look at it live: https://risboo6909.org/poker/
+
 ## Features
 
 - room creation by a leader with a shareable URL
