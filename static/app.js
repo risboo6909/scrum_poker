@@ -28,8 +28,6 @@ const authView = document.querySelector("#auth-view");
 const roomView = document.querySelector("#room-view");
 const createForm = document.querySelector("#create-form");
 const joinForm = document.querySelector("#join-form");
-const createDeckSelect = document.querySelector("#create-deck");
-const createDeckHint = document.querySelector("#create-deck-hint");
 const participantsNode = document.querySelector("#participants");
 const votePanel = document.querySelector("#vote-panel");
 const voteOptionsNode = document.querySelector("#vote-options");
@@ -194,14 +192,6 @@ function renderVoteOptions() {
     });
     voteOptionsNode.appendChild(button);
   });
-}
-
-function updateCreateDeckHint() {
-  const selectedOption = createDeckSelect?.selectedOptions?.[0];
-  if (!selectedOption || !createDeckHint) {
-    return;
-  }
-  createDeckHint.textContent = selectedOption.dataset.description || "";
 }
 
 function currentParticipant() {
@@ -420,10 +410,10 @@ function connectRoomSocket() {
   });
 }
 
-async function createRoom(name, deck) {
+async function createRoom(name) {
   const data = await api("/api/rooms", {
     method: "POST",
-    body: JSON.stringify({ name, deck }),
+    body: JSON.stringify({ name }),
   });
   state.roomId = data.roomId;
   state.participantId = data.participantId;
@@ -474,13 +464,9 @@ async function leaderAction(path) {
 
 createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const formData = new FormData(createForm);
   try {
     clearMessage();
-    await createRoom(
-      (formData.get("name") || "").toString().trim(),
-      (formData.get("deck") || "fibonacci").toString()
-    );
+    await createRoom((new FormData(createForm).get("name") || "").toString().trim());
   } catch (error) {
     setMessage(error.message, true);
   }
@@ -502,7 +488,6 @@ revealButton.addEventListener("click", () => leaderAction("reveal"));
 themeToggle.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
-createDeckSelect?.addEventListener("change", updateCreateDeckHint);
 copyRoomLinkButton.addEventListener("click", async () => {
   try {
     await copyText(roomLink.href);
@@ -511,8 +496,6 @@ copyRoomLinkButton.addEventListener("click", async () => {
     setMessage("Could not copy room link", true);
   }
 });
-
-updateCreateDeckHint();
 applyTheme(currentTheme);
 restoreParticipant();
 render();

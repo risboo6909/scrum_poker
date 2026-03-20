@@ -32,15 +32,6 @@
           <form id="create-form" class="stack">
             <label for="create-name">Create room</label>
             <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
-            <label for="create-deck">Voting scale</label>
-            <select id="create-deck" name="deck">
-              {% for deck in decks %}
-                <option value="{{ deck.id }}" data-description="{{ deck.description }}">{{ deck.label }}</option>
-              {% endfor %}
-            </select>
-            <p id="create-deck-hint" class="muted deck-hint">
-              {{ (decks | list | first).description }}
-            </p>
             <button type="submit">Create room</button>
           </form>
 

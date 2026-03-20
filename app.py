@@ -369,7 +369,6 @@ def render_index():
     return render_template(
         "index.html",
         base_prefix=BASE_PREFIX,
-        decks=DECKS.values(),
         total_rooms_created=app.total_rooms_created,
     )
 
@@ -431,11 +430,9 @@ def room_socket(ws, room_id):
 def create_room():
     payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
-    deck_id = (payload.get("deck") or "fibonacci").strip().lower()
+    deck_id = "fibonacci"
     if not name:
         return error("Name is required")
-    if deck_id not in DECKS:
-        return error("Unknown voting deck")
 
     if active_room_count() >= MAX_ACTIVE_ROOMS:
         return error("Room limit reached, please try again later", 503)
