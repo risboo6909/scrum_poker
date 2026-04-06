@@ -65,7 +65,8 @@ def get_db():
                 participant_id TEXT NOT NULL,
                 room_id TEXT NOT NULL,
                 round_number INTEGER NOT NULL,
-                value REAL NOT NULL,
+                value REAL,
+                abstained INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (participant_id, room_id, round_number),
                 FOREIGN KEY(participant_id) REFERENCES participants(id),
                 FOREIGN KEY(room_id) REFERENCES rooms(id)
@@ -223,6 +224,8 @@ def require_leader(room_id, participant_id):
 
 
 def parse_vote_value(raw_value):
+    if raw_value == "abstain":
+        return "abstain"
     try:
         value = float(raw_value)
     except (TypeError, ValueError):
@@ -279,7 +282,8 @@ def serialize_room(room_id):
             p.id,
             p.name,
             p.is_leader,
-            v.value
+            v.value,
+            COALESCE(v.abstained, 0) AS abstained
         FROM participants p
         LEFT JOIN votes v
             ON v.participant_id = p.id
@@ -294,9 +298,12 @@ def serialize_room(room_id):
     revealed_values = []
     serialized_participants = []
     for participant in participants:
-        has_vote = participant["value"] is not None
-        vote_value = serialize_value(participant["value"]) if has_vote else None
-        if room["phase"] == "revealed" and has_vote:
+        abstained = bool(participant["abstained"])
+        has_vote = participant["value"] is not None or abstained
+        vote_value = "abstain" if abstained else (
+            serialize_value(participant["value"]) if participant["value"] is not None else None
+        )
+        if room["phase"] == "revealed" and participant["value"] is not None:
             revealed_values.append(vote_value)
 
         serialized_participants.append(
@@ -306,6 +313,7 @@ def serialize_room(room_id):
                 "isLeader": bool(participant["is_leader"]),
                 "isOnline": participant["id"] in online_ids,
                 "hasVoted": has_vote,
+                "hasAbstained": abstained,
                 "vote": vote_value if room["phase"] == "revealed" else None,
             }
         )
@@ -326,14 +334,15 @@ def get_viewer(room_id, participant_id):
     if participant:
         viewer_vote_row = get_db().execute(
             """
-            SELECT v.value
+            SELECT v.value, COALESCE(v.abstained, 0) AS abstained
             FROM votes v
             JOIN rooms r ON r.id = v.room_id
             WHERE v.room_id = ? AND v.participant_id = ? AND v.round_number = r.round_number
             """,
             (room_id, participant_id),
         ).fetchone()
-        viewer_vote = serialize_value(viewer_vote_row["value"]) if viewer_vote_row else None
+        if viewer_vote_row:
+            viewer_vote = "abstain" if viewer_vote_row["abstained"] else serialize_value(viewer_vote_row["value"])
 
     return {
         "participantId": participant["id"] if participant else None,
@@ -562,7 +571,7 @@ def submit_vote(room_id):
 
     vote_value = parse_vote_value(payload.get("value"))
     if vote_value is None:
-        return error("Vote must be a number")
+        return error("Vote must be a number or abstain")
 
     db = get_db()
     room = db.execute(
@@ -572,20 +581,28 @@ def submit_vote(room_id):
     if room["phase"] != "voting":
         return error("Voting has not started")
 
-    allowed_votes = {
-        normalize_vote_value(option) for option in room_deck(room["deck"])["options"]
-    }
-    if normalize_vote_value(vote_value) not in allowed_votes:
-        return error("Vote is not available in this room's deck")
+    abstained = vote_value == "abstain"
+    if not abstained:
+        allowed_votes = {
+            normalize_vote_value(option) for option in room_deck(room["deck"])["options"]
+        }
+        if normalize_vote_value(vote_value) not in allowed_votes:
+            return error("Vote is not available in this room's deck")
 
     db.execute(
         """
-        INSERT INTO votes (participant_id, room_id, round_number, value)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO votes (participant_id, room_id, round_number, value, abstained)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(participant_id, room_id, round_number)
-        DO UPDATE SET value = excluded.value
+        DO UPDATE SET value = excluded.value, abstained = excluded.abstained
         """,
-        (participant_id, room_id, room["round_number"], vote_value),
+        (
+            participant_id,
+            room_id,
+            room["round_number"],
+            None if abstained else vote_value,
+            1 if abstained else 0,
+        ),
     )
     db.commit()
     touch_room(room_id)

@@ -311,6 +311,27 @@ button:disabled {
   border: 1px solid var(--panel-border);
 }
 
+.vote-card-abstain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--secondary);
+}
+
+.vote-card-icon {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .vote-card.selected {
   background: var(--accent);
   color: #fff;

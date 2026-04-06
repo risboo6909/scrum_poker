@@ -163,16 +163,36 @@ function restoreParticipant() {
   state.participantId = localStorage.getItem(roomStorageKey(state.roomId));
 }
 
+const abstainVoteValue = "abstain";
+const abstainVoteLabel = "Need context";
+
+function formatVoteLabel(value) {
+  if (value === abstainVoteValue) {
+    return abstainVoteLabel;
+  }
+  return value === null ? "-" : String(value);
+}
+
 function renderVoteOptions() {
   voteOptionsNode.innerHTML = "";
   const currentVote = state.viewer?.currentVote ?? null;
   const voteOptions = state.room?.deck?.options || [];
+  const options = [...voteOptions, abstainVoteValue];
 
-  voteOptions.forEach((value) => {
+  options.forEach((value) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = String(value);
     button.className = "vote-card";
+    if (value === abstainVoteValue) {
+      button.classList.add("vote-card-abstain");
+      button.setAttribute("aria-label", abstainVoteLabel);
+      button.title = abstainVoteLabel;
+      button.innerHTML = `
+        <span class="vote-card-icon" aria-hidden="true">?</span>
+      `;
+    } else {
+      button.textContent = String(value);
+    }
     if (currentVote === value && state.room) {
       button.classList.add("selected");
     }
@@ -232,9 +252,13 @@ function renderParticipants() {
     if (viewer?.id === participant.id) labels.push("you");
 
     if (state.room.phase === "revealed") {
-      meta.textContent = participant.vote !== null ? `vote: ${participant.vote}` : "no vote";
+      meta.textContent = participant.vote !== null ? formatVoteLabel(participant.vote) : "No vote";
     } else {
-      meta.textContent = participant.hasVoted ? "voted" : "waiting";
+      meta.textContent = participant.hasAbstained
+        ? "needs context"
+        : participant.hasVoted
+          ? "voted"
+          : "waiting";
     }
 
     const labelNode = document.createElement("span");
@@ -253,7 +277,7 @@ function renderParticipants() {
 
     const cardBack = document.createElement("div");
     cardBack.className = "flip-face flip-back";
-    cardBack.textContent = participant.vote !== null ? String(participant.vote) : "-";
+    cardBack.textContent = formatVoteLabel(participant.vote);
 
     flipInner.appendChild(cardFront);
     flipInner.appendChild(cardBack);
@@ -311,9 +335,13 @@ function renderVotePanel() {
   }
 
   if (state.room.phase === "voting") {
-    voteStatus.textContent = viewer.hasVoted ? "Vote saved" : "Pick a card";
+    voteStatus.textContent = viewer.hasAbstained
+      ? abstainVoteLabel
+      : viewer.hasVoted
+        ? "Vote saved"
+        : "Pick a card";
   } else if (state.room.phase === "revealed") {
-    voteStatus.textContent = viewer.vote !== null ? `You voted ${viewer.vote}` : "You did not vote";
+    voteStatus.textContent = viewer.vote !== null ? `You chose ${formatVoteLabel(viewer.vote)}` : "You did not vote";
   } else {
     voteStatus.textContent = "Waiting for the leader to start";
   }
@@ -321,10 +349,10 @@ function renderVotePanel() {
   Array.from(voteOptionsNode.children).forEach((button) => {
     button.disabled = !canVote;
     button.classList.remove("selected");
-    if (state.room.phase === "voting" && viewerVote !== null && Number(button.textContent) === viewerVote) {
-      button.classList.add("selected");
-    }
-    if (state.room.phase === "revealed" && viewerVote !== null && Number(button.textContent) === viewerVote) {
+    const buttonValue = button.classList.contains("vote-card-abstain")
+      ? abstainVoteValue
+      : Number(button.textContent);
+    if ((state.room.phase === "voting" || state.room.phase === "revealed") && viewerVote === buttonValue) {
       button.classList.add("selected");
     }
   });
