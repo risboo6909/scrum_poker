@@ -46,8 +46,11 @@ Current behavior:
 
 - A leader creates a room and gets a shareable URL.
 - Other users join by opening that room URL and submitting their name.
+- Opening a room URL for a room that does not exist immediately shows `Room not found` and disables the join form.
 - The leader can start voting and reveal cards.
 - Starting a new vote round is done with `Start vote`; there is no separate `Restart` button in the UI.
+- The leader can remove non-leader participants from the participant list.
+- The leader can end the whole room session from the top-left close control and return to the landing screen.
 - Votes are hidden until reveal.
 - After reveal, the UI shows participant votes plus `median` and `most common vote`.
 - Room updates are pushed in real time over WebSocket.
@@ -75,6 +78,7 @@ When making changes, keep these files aligned:
 - Prefer small, readable changes over abstract architecture.
 - Preserve the room flow: create, join, start, vote, reveal, start again.
 - Keep leader-only actions restricted to the leader.
+- When a room URL is invalid or expired, fail early on page load instead of waiting for a join attempt.
 - Do not reveal participant votes before the reveal step.
 - Keep the app functional behind a reverse proxy such as Nginx.
 - Keep room retention simple: TTL-based cleanup is preferred over complex schedulers.

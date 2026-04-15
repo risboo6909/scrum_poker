@@ -18,6 +18,7 @@ const state = {
   participantId: null,
   room: null,
   viewer: null,
+  roomAvailable: null,
 };
 let roomSocket = null;
 let currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -45,6 +46,7 @@ const themeToggle = document.querySelector("#theme-toggle");
 
 const startButton = document.querySelector("#start-button");
 const revealButton = document.querySelector("#reveal-button");
+const endSessionButton = document.querySelector("#end-session-button");
 const panelNode = document.querySelector(".panel");
 
 function applyTheme(theme) {
@@ -66,6 +68,33 @@ function setMessage(text, isError = false) {
 
 function clearMessage() {
   setMessage("");
+}
+
+function setJoinFormDisabled(disabled) {
+  joinForm.querySelectorAll("input, button").forEach((element) => {
+    element.disabled = disabled;
+  });
+}
+
+function clearRoomSession(message) {
+  const previousRoomId = state.roomId;
+  if (previousRoomId) {
+    localStorage.removeItem(roomStorageKey(previousRoomId));
+  }
+  if (roomSocket) {
+    roomSocket.close();
+    roomSocket = null;
+  }
+  state.roomId = null;
+  state.participantId = null;
+  state.room = null;
+  state.viewer = null;
+  state.roomAvailable = null;
+  window.history.replaceState({}, "", `${basePath || "/"}`);
+  if (message) {
+    setMessage(message, true);
+  }
+  render();
 }
 
 async function copyText(text) {
@@ -199,15 +228,23 @@ function renderVoteOptions() {
     button.addEventListener("click", async () => {
       try {
         clearMessage();
-        await api(`/api/rooms/${state.roomId}/vote`, {
+        state.viewer = {
+          ...state.viewer,
+          currentVote: value,
+        };
+        renderVotePanel();
+        const data = await api(`/api/rooms/${state.roomId}/vote`, {
           method: "POST",
           body: JSON.stringify({
             participantId: state.participantId,
             value,
           }),
         });
+        state.room = data.room;
+        render();
       } catch (error) {
         setMessage(error.message, true);
+        refreshRoom().catch(() => {});
       }
     });
     voteOptionsNode.appendChild(button);
@@ -227,6 +264,7 @@ function formatPhase(phase) {
 function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
+  const canKickParticipants = !!state.viewer?.isLeader;
   const visibleParticipants = state.room.participants.filter(
     (participant) =>
       participant.isOnline ||
@@ -239,10 +277,39 @@ function renderParticipants() {
   visibleParticipants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
+    if (state.room.phase !== "revealed" && (participant.hasVoted || participant.hasAbstained)) {
+      item.classList.add("participant-card-voted");
+    }
     item.style.setProperty("--flip-delay", `${index * 70}ms`);
 
     const title = document.createElement("strong");
     title.textContent = participant.name;
+
+    if (canKickParticipants && !participant.isLeader) {
+      const kickButton = document.createElement("button");
+      kickButton.type = "button";
+      kickButton.className = "participant-kick-button secondary";
+      kickButton.setAttribute("aria-label", `Kick ${participant.name}`);
+      kickButton.title = `Kick ${participant.name}`;
+      kickButton.textContent = "X";
+      kickButton.addEventListener("click", async () => {
+        try {
+          clearMessage();
+          const data = await api(`/api/rooms/${state.roomId}/kick`, {
+            method: "POST",
+            body: JSON.stringify({
+              participantId: state.participantId,
+              targetParticipantId: participant.id,
+            }),
+          });
+          state.room = data.room;
+          render();
+        } catch (error) {
+          setMessage(error.message, true);
+        }
+      });
+      item.appendChild(kickButton);
+    }
 
     const meta = document.createElement("span");
     meta.className = "muted";
@@ -315,6 +382,7 @@ function renderStats() {
 
 function renderLeaderControls() {
   const isLeader = !!state.viewer?.isLeader;
+  endSessionButton.classList.toggle("hidden", !isLeader);
   leaderActions.classList.toggle("hidden", !isLeader);
   if (!isLeader) {
     return;
@@ -360,10 +428,12 @@ function renderVotePanel() {
 
 function render() {
   if (!state.room) {
+    endSessionButton.classList.add("hidden");
     authView.classList.remove("hidden");
     roomView.classList.add("hidden");
     createForm.classList.toggle("hidden", !!state.roomId);
     joinForm.classList.toggle("hidden", !state.roomId);
+    setJoinFormDisabled(!!state.roomId && state.roomAvailable === false);
     clearConfetti();
     lastRenderedPhase = null;
     return;
@@ -407,6 +477,23 @@ async function refreshRoom() {
   updateStateFromPayload(data);
 }
 
+async function checkJoinRoomAvailability() {
+  if (!state.roomId || state.participantId) {
+    return;
+  }
+
+  try {
+    clearMessage();
+    await api(`/api/rooms/${state.roomId}`);
+    state.roomAvailable = true;
+    setJoinFormDisabled(false);
+  } catch (error) {
+    state.roomAvailable = false;
+    setJoinFormDisabled(true);
+    setMessage(error.message, true);
+  }
+}
+
 function connectRoomSocket() {
   if (!state.roomId || !state.participantId) {
     return;
@@ -431,7 +518,13 @@ function connectRoomSocket() {
     if (state.roomId && state.participantId) {
       window.setTimeout(() => {
         if (roomSocket && roomSocket.readyState === WebSocket.CLOSED) {
-          connectRoomSocket();
+          refreshRoom()
+            .then(() => {
+              connectRoomSocket();
+            })
+            .catch((error) => {
+              clearRoomSession(error.message);
+            });
         }
       }, pollIntervalMs);
     }
@@ -502,6 +595,10 @@ createForm.addEventListener("submit", async (event) => {
 
 joinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (state.roomAvailable === false) {
+    setMessage("Room not found", true);
+    return;
+  }
   const formData = new FormData(joinForm);
   try {
     clearMessage();
@@ -513,6 +610,18 @@ joinForm.addEventListener("submit", async (event) => {
 
 startButton.addEventListener("click", () => leaderAction("start"));
 revealButton.addEventListener("click", () => leaderAction("reveal"));
+endSessionButton.addEventListener("click", async () => {
+  try {
+    clearMessage();
+    await api(`/api/rooms/${state.roomId}/end`, {
+      method: "POST",
+      body: JSON.stringify({ participantId: state.participantId }),
+    });
+    clearRoomSession();
+  } catch (error) {
+    setMessage(error.message, true);
+  }
+});
 themeToggle.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
@@ -536,4 +645,6 @@ if (state.roomId && state.participantId) {
     render();
   });
   connectRoomSocket();
+} else if (state.roomId) {
+  checkJoinRoomAvailability();
 }

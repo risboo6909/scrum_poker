@@ -93,6 +93,32 @@ def remove_connection(room_id, ws):
             connections.pop(room_id, None)
 
 
+def disconnect_participant(room_id, participant_id):
+    with connections_lock:
+        room_connections = list(connections.get(room_id, []))
+
+    for entry in room_connections:
+        if entry["participant_id"] != participant_id:
+            continue
+        try:
+            entry["ws"].close()
+        except Exception:
+            pass
+        remove_connection(room_id, entry["ws"])
+
+
+def disconnect_room(room_id):
+    with connections_lock:
+        room_connections = list(connections.get(room_id, []))
+
+    for entry in room_connections:
+        try:
+            entry["ws"].close()
+        except Exception:
+            pass
+        remove_connection(room_id, entry["ws"])
+
+
 def online_participant_ids(room_id):
     with connections_lock:
         room_connections = connections.get(room_id, [])
@@ -162,6 +188,7 @@ def participant_in_room(room_id, participant_id):
 
 
 def remove_participant(room_id, participant_id):
+    disconnect_participant(room_id, participant_id)
     db = get_db()
     db.execute(
         "DELETE FROM votes WHERE room_id = ? AND participant_id = ?",
@@ -171,6 +198,15 @@ def remove_participant(room_id, participant_id):
         "DELETE FROM participants WHERE room_id = ? AND id = ?",
         (room_id, participant_id),
     )
+    db.commit()
+
+
+def remove_room(room_id):
+    disconnect_room(room_id)
+    db = get_db()
+    db.execute("DELETE FROM votes WHERE room_id = ?", (room_id,))
+    db.execute("DELETE FROM participants WHERE room_id = ?", (room_id,))
+    db.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
     db.commit()
 
 
@@ -658,6 +694,48 @@ def restart_vote(room_id):
     touch_room(room_id)
     broadcast_room(room_id)
     return jsonify({"room": serialize_room(room_id)})
+
+
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/kick")
+def kick_participant(room_id):
+    if not room_exists(room_id):
+        return error("Room not found", 404)
+
+    payload = request.get_json(silent=True) or {}
+    leader_id = payload.get("participantId")
+    target_id = payload.get("targetParticipantId")
+    _, leader_error = require_leader(room_id, leader_id)
+    if leader_error:
+        return leader_error
+
+    if not target_id:
+        return error("Participant is required")
+
+    target = participant_in_room(room_id, target_id)
+    if not target:
+        return error("Participant not found in room", 404)
+    if target["is_leader"]:
+        return error("Leader cannot be kicked", 400)
+
+    remove_participant(room_id, target_id)
+    touch_room(room_id)
+    broadcast_room(room_id)
+    return jsonify({"room": serialize_room(room_id)})
+
+
+@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/end")
+def end_room(room_id):
+    if not room_exists(room_id):
+        return error("Room not found", 404)
+
+    payload = request.get_json(silent=True) or {}
+    participant_id = payload.get("participantId")
+    _, leader_error = require_leader(room_id, participant_id)
+    if leader_error:
+        return leader_error
+
+    remove_room(room_id)
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

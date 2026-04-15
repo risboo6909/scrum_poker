@@ -78,11 +78,64 @@ select {
 .topbar {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   margin-bottom: 12px;
+}
+
+.topbar:has(.session-close-button:not(.hidden)) {
+  justify-content: space-between;
 }
 
 .theme-toggle {
   min-width: 120px;
+}
+
+.session-close-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--panel-border));
+}
+
+.session-close-button:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.landing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-items: center;
+  gap: 28px;
+}
+
+.landing-art {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 100%;
+}
+
+.landing-logo {
+  display: none;
+  width: min(100%, 320px);
+  height: auto;
+  filter: drop-shadow(0 22px 42px rgba(0, 0, 0, 0.14));
+}
+
+:root:not([data-theme="dark"]) .landing-logo-light {
+  display: block;
+}
+
+:root[data-theme="dark"] .landing-logo-dark {
+  display: block;
 }
 
 .hero h1,
@@ -242,6 +295,49 @@ button:disabled {
   background: var(--surface);
 }
 
+.participant-card {
+  position: relative;
+}
+
+.participant-card-voted {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--panel-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 92%, transparent), transparent 68%),
+    var(--surface);
+  box-shadow:
+    0 16px 34px rgba(200, 85, 61, 0.22),
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.participant-card-voted .flip-front {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--panel-border));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.24),
+    0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.participant-kick-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+  z-index: 1;
+}
+
+.participant-kick-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 .flip-card {
   overflow: hidden;
   border-radius: 16px;
@@ -309,6 +405,23 @@ button:disabled {
   background: var(--input-bg);
   color: var(--text);
   border: 1px solid var(--panel-border);
+  box-shadow: 0 8px 18px rgba(84, 54, 33, 0.08);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.vote-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(84, 54, 33, 0.12);
+}
+
+.vote-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, white);
+  outline-offset: 2px;
 }
 
 .vote-card-abstain {
@@ -335,6 +448,11 @@ button:disabled {
 .vote-card.selected {
   background: var(--accent);
   color: #fff;
+  border-color: color-mix(in srgb, var(--accent) 88%, black);
+  box-shadow:
+    0 18px 36px rgba(200, 85, 61, 0.34),
+    0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .stats {
@@ -414,6 +532,19 @@ a {
 }
 
 @media (max-width: 640px) {
+  .landing-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-art {
+    justify-content: center;
+    order: -1;
+  }
+
+  .landing-logo {
+    width: min(100%, 260px);
+  }
+
   .panel {
     padding: 20px;
     border-radius: 20px;

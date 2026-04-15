@@ -11,39 +11,67 @@
         document.documentElement.dataset.theme = savedTheme;
       }
     </script>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ base_prefix }}/static/favicon.png"
+    />
     <link rel="stylesheet" href="{{ base_prefix }}/static/styles.css" />
   </head>
   <body>
     <main class="page">
       <section class="panel">
         <div class="topbar">
+          <button
+            id="end-session-button"
+            type="button"
+            class="secondary session-close-button hidden"
+            aria-label="End session"
+            title="End session"
+          >
+            ×
+          </button>
           <button id="theme-toggle" type="button" class="secondary theme-toggle">Dark theme</button>
         </div>
-        <div class="hero">
-          <p class="eyebrow">Simple Scrum Poker</p>
-          <h1>Vote together in one room</h1>
-          <p class="subtle">
-            Leader creates a room, shares the link, starts voting, reveals cards
-            and restarts the round when needed.
-          </p>
+        <div id="auth-view" class="landing-layout gap-lg">
+          <div class="stack gap-lg">
+            <div class="hero">
+              <p class="eyebrow">Scrum Poker</p>
+              <h1>Vote together in one room</h1>
+              <p class="subtle">
+                Leader creates a room, shares the link, starts voting, reveals cards
+                and restarts the round when needed.
+              </p>
+            </div>
+
+            <form id="create-form" class="stack">
+              <label for="create-name">Create room</label>
+              <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
+              <button type="submit">Create room</button>
+            </form>
+
+            <form id="join-form" class="stack hidden">
+              <label for="join-name">Join room</label>
+              <input id="join-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
+              <button type="submit">Join room</button>
+            </form>
+
+            <p class="startup-stat muted">Rooms created since startup: {{ total_rooms_created }}</p>
+          </div>
+
+          <aside class="landing-art" aria-hidden="true">
+            <img
+              src="{{ base_prefix }}/static/logo-light.png"
+              alt=""
+              class="landing-logo landing-logo-light"
+            />
+            <img
+              src="{{ base_prefix }}/static/logo-dark.png"
+              alt=""
+              class="landing-logo landing-logo-dark"
+            />
+          </aside>
         </div>
-
-        <div id="auth-view" class="stack gap-lg">
-          <form id="create-form" class="stack">
-            <label for="create-name">Create room</label>
-            <input id="create-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
-            <button type="submit">Create room</button>
-          </form>
-
-          <form id="join-form" class="stack hidden">
-            <label for="join-name">Join room</label>
-            <input id="join-name" name="name" type="text" placeholder="Your name" maxlength="40" required />
-            <button type="submit">Join room</button>
-          </form>
-
-          <p class="startup-stat muted">Rooms created since startup: {{ total_rooms_created }}</p>
-        </div>
-
         <div id="room-view" class="stack gap-lg hidden">
           <div class="room-topbar">
             <div>
@@ -102,8 +130,9 @@
             </article>
           </section>
 
-          <p id="message" class="message hidden"></p>
         </div>
+
+        <p id="message" class="message hidden"></p>
 
         <footer class="author-note muted">
           <a href="https://github.com/risboo6909" target="_blank" rel="noreferrer">github.com/risboo6909</a>
