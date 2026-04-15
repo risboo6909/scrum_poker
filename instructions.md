@@ -52,6 +52,8 @@ Current behavior:
 - The leader can remove non-leader participants from the participant list.
 - The leader can end the whole room session from the top-left close control and return to the landing screen.
 - Votes are hidden until reveal.
+- Before reveal, each participant can see their own selected card on their own participant card, while other participants still only see a hidden state.
+- The current user is labeled inline in the participant list as `Name (You)`.
 - After reveal, the UI shows participant votes plus `median` and `most common vote`.
 - Room updates are pushed in real time over WebSocket.
 - Rooms expire automatically after inactivity.
@@ -79,7 +81,7 @@ When making changes, keep these files aligned:
 - Preserve the room flow: create, join, start, vote, reveal, start again.
 - Keep leader-only actions restricted to the leader.
 - When a room URL is invalid or expired, fail early on page load instead of waiting for a join attempt.
-- Do not reveal participant votes before the reveal step.
+- Do not reveal participant votes to other participants before the reveal step.
 - Keep the app functional behind a reverse proxy such as Nginx.
 - Keep room retention simple: TTL-based cleanup is preferred over complex schedulers.
 - Keep the frontend buildless unless there is a strong reason to introduce a toolchain.

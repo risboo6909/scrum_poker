@@ -277,13 +277,16 @@ function renderParticipants() {
   visibleParticipants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
+    const isViewerCard = participant.id === state.participantId;
     if (state.room.phase !== "revealed" && (participant.hasVoted || participant.hasAbstained)) {
       item.classList.add("participant-card-voted");
     }
     item.style.setProperty("--flip-delay", `${index * 70}ms`);
 
     const title = document.createElement("strong");
-    title.textContent = participant.name;
+    title.textContent = viewer?.id === participant.id
+      ? `${participant.name} (You)`
+      : participant.name;
 
     if (canKickParticipants && !participant.isLeader) {
       const kickButton = document.createElement("button");
@@ -316,7 +319,6 @@ function renderParticipants() {
 
     const labels = [];
     if (participant.isLeader) labels.push("leader");
-    if (viewer?.id === participant.id) labels.push("you");
 
     if (state.room.phase === "revealed") {
       meta.textContent = participant.vote !== null ? formatVoteLabel(participant.vote) : "No vote";
@@ -340,7 +342,14 @@ function renderParticipants() {
 
     const cardFront = document.createElement("div");
     cardFront.className = "flip-face flip-front";
-    cardFront.textContent = "?";
+    cardFront.textContent = (
+      isViewerCard &&
+      state.room.phase !== "revealed" &&
+      state.viewer?.currentVote !== null &&
+      state.viewer?.currentVote !== undefined
+    )
+      ? formatVoteLabel(state.viewer.currentVote)
+      : "?";
 
     const cardBack = document.createElement("div");
     cardBack.className = "flip-face flip-back";
