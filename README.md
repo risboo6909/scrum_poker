@@ -4,6 +4,10 @@ A simple Scrum Poker app with a JavaScript frontend, a Python backend, and real-
 
 Take a look at it live: https://risboo6909.org/poker/
 
+## How to use
+
+![How to use Scrum Poker: create a room, invite your team, start voting with at least two participants, choose a card, reveal together, then discuss and repeat.](docs/images/how-to-use-scrum-poker.png)
+
 ## Features
 
 - room creation by a leader with a shareable URL
