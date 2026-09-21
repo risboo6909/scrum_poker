@@ -23,6 +23,8 @@ const state = {
 let roomSocket = null;
 let currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 let lastRenderedPhase = null;
+let lastRenderedViewerVote = null;
+const cardTurns = new Map();
 let confettiTimeoutId = null;
 
 const authView = document.querySelector("#auth-view");
@@ -46,6 +48,7 @@ const themeToggle = document.querySelector("#theme-toggle");
 
 const startButton = document.querySelector("#start-button");
 const revealButton = document.querySelector("#reveal-button");
+const autoRevealToggle = document.querySelector("#auto-reveal-toggle");
 const endSessionButton = document.querySelector("#end-session-button");
 const panelNode = document.querySelector(".panel");
 
@@ -202,6 +205,23 @@ function formatVoteLabel(value) {
   return value === null ? "-" : String(value);
 }
 
+function applyEstimateGlow(element, value) {
+  const maximum = Math.max(...(state.room?.deck?.options || [21]));
+  const strength = typeof value === "number" ? Math.min(1, Math.max(0, value / maximum)) : 0;
+  element.style.setProperty("--estimate-glow", `${18 + strength * 72}%`);
+  element.style.setProperty("--estimate-blur", `${3 + strength * 18}px`);
+  element.style.setProperty("--estimate-scale", String(1 + strength * 0.24));
+}
+
+function setEstimateContent(element, value) {
+  element.textContent = "";
+  const number = document.createElement("span");
+  number.className = "estimate-number";
+  number.textContent = formatVoteLabel(value);
+  element.appendChild(number);
+  applyEstimateGlow(element, value);
+}
+
 function renderVoteOptions() {
   voteOptionsNode.innerHTML = "";
   const currentVote = state.viewer?.currentVote ?? null;
@@ -220,19 +240,22 @@ function renderVoteOptions() {
         <span class="vote-card-icon" aria-hidden="true">?</span>
       `;
     } else {
-      button.textContent = String(value);
+      setEstimateContent(button, value);
     }
     if (currentVote === value && state.room) {
       button.classList.add("selected");
     }
     button.addEventListener("click", async () => {
+      if (state.room?.phase !== "voting") {
+        return;
+      }
       try {
         clearMessage();
         state.viewer = {
           ...state.viewer,
           currentVote: value,
         };
-        renderVotePanel();
+        render();
         const data = await api(`/api/rooms/${state.roomId}/vote`, {
           method: "POST",
           body: JSON.stringify({
@@ -342,18 +365,21 @@ function renderParticipants() {
 
     const cardFront = document.createElement("div");
     cardFront.className = "flip-face flip-front";
-    cardFront.textContent = (
-      isViewerCard &&
-      state.room.phase !== "revealed" &&
-      state.viewer?.currentVote !== null &&
-      state.viewer?.currentVote !== undefined
-    )
-      ? formatVoteLabel(state.viewer.currentVote)
-      : "?";
+    const ownVote = isViewerCard && state.room.phase !== "revealed"
+      ? state.viewer?.currentVote
+      : null;
+    const hasOwnVote = ownVote !== null && ownVote !== undefined;
+    cardFront.classList.add("playing-card-pattern");
+    cardFront.setAttribute("aria-label", "Face-down card");
+    if (hasOwnVote) item.classList.add("own-card-selected");
 
     const cardBack = document.createElement("div");
-    cardBack.className = "flip-face flip-back";
-    cardBack.textContent = formatVoteLabel(participant.vote);
+    cardBack.className = "flip-face flip-back playing-card-face";
+    const visibleVote = hasOwnVote ? ownVote : participant.vote;
+    setEstimateContent(cardBack, visibleVote);
+    const faceUp = hasOwnVote || state.room.phase === "revealed";
+    cardFront.setAttribute("aria-hidden", String(faceUp));
+    cardBack.setAttribute("aria-hidden", String(!faceUp));
 
     flipInner.appendChild(cardFront);
     flipInner.appendChild(cardBack);
@@ -365,13 +391,27 @@ function renderParticipants() {
     item.appendChild(meta);
     participantsNode.appendChild(item);
 
-    if (state.room.phase === "revealed") {
-      if (shouldAnimateReveal) {
-        requestAnimationFrame(() => {
-          item.classList.add("revealed");
-        });
+    if (state.room.phase === "revealed") item.classList.add("revealed");
+
+    const changedOwnVote = hasOwnVote && state.room.phase === "voting"
+      && ownVote !== lastRenderedViewerVote;
+    if (changedOwnVote || shouldAnimateReveal) {
+      cardTurns.set(participant.id, {
+        started: performance.now(),
+        repeat: changedOwnVote && lastRenderedViewerVote !== null,
+      });
+    }
+    if (!faceUp) cardTurns.delete(participant.id);
+    const turn = cardTurns.get(participant.id);
+    if (turn) {
+      const elapsed = performance.now() - turn.started;
+      if (elapsed < 650) {
+        // Both HTTP and WebSocket can render the same vote. Continue the
+        // existing timeline instead of cancelling the turn on that render.
+        item.classList.add(turn.repeat ? "card-turning-again" : "card-turning");
+        flipInner.style.animationDelay = `${-elapsed}ms`;
       } else {
-        item.classList.add("revealed");
+        cardTurns.delete(participant.id);
       }
     }
   });
@@ -399,6 +439,7 @@ function renderLeaderControls() {
 
   startButton.disabled = state.room.phase === "voting";
   revealButton.disabled = state.room.phase !== "voting";
+  autoRevealToggle.checked = !!state.room.autoReveal;
 }
 
 function renderVotePanel() {
@@ -445,6 +486,8 @@ function render() {
     setJoinFormDisabled(!!state.roomId && state.roomAvailable === false);
     clearConfetti();
     lastRenderedPhase = null;
+    lastRenderedViewerVote = null;
+    cardTurns.clear();
     return;
   }
 
@@ -460,9 +503,9 @@ function render() {
 
   renderParticipants();
   renderLeaderControls();
+  renderVoteOptions();
   renderVotePanel();
   renderStats();
-  renderVoteOptions();
 
   if (
     lastRenderedPhase !== "revealed" &&
@@ -473,6 +516,7 @@ function render() {
   }
 
   lastRenderedPhase = state.room.phase;
+  lastRenderedViewerVote = state.viewer?.currentVote ?? null;
 }
 
 async function refreshRoom() {
@@ -596,7 +640,8 @@ createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     clearMessage();
-    await createRoom((new FormData(createForm).get("name") || "").toString().trim());
+    const form = new FormData(createForm);
+    await createRoom((form.get("name") || "").toString().trim());
   } catch (error) {
     setMessage(error.message, true);
   }
@@ -619,6 +664,24 @@ joinForm.addEventListener("submit", async (event) => {
 
 startButton.addEventListener("click", () => leaderAction("start"));
 revealButton.addEventListener("click", () => leaderAction("reveal"));
+autoRevealToggle.addEventListener("change", async () => {
+  const enabled = autoRevealToggle.checked;
+  try {
+    clearMessage();
+    const data = await api(`/api/rooms/${state.roomId}/auto-reveal`, {
+      method: "POST",
+      body: JSON.stringify({
+        participantId: state.participantId,
+        enabled,
+      }),
+    });
+    state.room = data.room;
+    render();
+  } catch (error) {
+    autoRevealToggle.checked = !enabled;
+    setMessage(error.message, true);
+  }
+});
 endSessionButton.addEventListener("click", async () => {
   try {
     clearMessage();

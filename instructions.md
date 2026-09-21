@@ -6,7 +6,7 @@ Build and evolve a simple Scrum Poker application.
 
 The project should stay lightweight, easy to run, and easy to modify.
 
-## Original Request Translated To English
+## Original Request
 
 Create a Scrum Poker app in JavaScript.
 
@@ -45,10 +45,16 @@ The project currently uses:
 Current behavior:
 
 - A leader creates a room and gets a shareable URL.
+- Public participant IDs are not credentials. Create/join sets a private HttpOnly, SameSite=Strict room cookie (Secure over HTTPS); HTTP actions, private state, and WebSocket connections require the matching session. Only credential hashes are stored in memory.
+- Requests serialize shared room/database state with a reentrant lock; socket receive loops never hold it. Deploy one application process.
 - Other users join by opening that room URL and submitting their name.
 - Opening a room URL for a room that does not exist immediately shows `Room not found` and disables the join form.
 - The leader can start voting and reveal cards.
+- The leader can optionally enable automatic reveal. When enabled, the server reveals as soon as every participant currently in the room has submitted a numeric estimate or `Need context`.
 - Starting a new vote round is done with `Start vote`; there is no separate `Restart` button in the UI.
+- The first round is 1; starting after reveal increments it. Starting during voting and revealing outside voting return 409. Legacy `/restart` is retained only from revealed to lobby and increments once.
+- Votes must be finite JSON numbers exactly present in the room deck, or `abstain`; strings and booleans are rejected.
+- Automatic reveal is checked after votes, enabling the option, kicks, and disconnect cleanup. Abstentions count as submissions.
 - The leader can remove non-leader participants from the participant list.
 - The leader can end the whole room session from the top-left close control and return to the landing screen.
 - Votes are hidden until reveal.
@@ -58,10 +64,14 @@ Current behavior:
 - Room updates are pushed in real time over WebSocket.
 - Rooms expire automatically after inactivity.
 - Active room count is capped at 10000 by default.
-- The landing screen shows a small counter for rooms created since process startup.
+- The landing screen shows total rooms created, persisted separately in a file-backed SQLite counter. Only this aggregate survives restarts; rooms and votes remain in memory. Compose mounts a named volume for the counter.
 - The UI supports light and dark themes and stores the preference in browser local storage.
-- Room reveal includes a card reveal animation for participant cards.
-- If a round has a most common vote, reveal also triggers a short party-popper confetti animation.
+- Cards use portrait playing-card proportions, a single centered estimate, and patterned burgundy backs. Higher estimates make only the estimate numeral grow and glow; dark mode uses subdued dark faces and backs.
+- Room reveal turns participant cards over with a 3D flip; reduced-motion preferences disable the transition. Own selected estimates remain visible before reveal.
+- The reveal transition must animate in current Chrome and Safari. Version static assets with a query parameter so a deployed UI change cannot combine stale JavaScript or CSS with a new counterpart.
+- When a participant chooses an estimate, only the card on their own participant tile turns over to reveal that estimate; other participants continue to see a card back until the leader reveals the round.
+- Reveal triggers confetti only when at least two participants all submitted the same numeric vote; abstentions and missing votes prevent celebration.
+- `/health` under the configured prefix checks both databases; Docker includes a healthcheck.
 
 ## Source Of Truth
 
@@ -90,7 +100,7 @@ When making changes, keep these files aligned:
 ## Non-Goals For Now
 
 - No authentication system beyond participant identity within a room
-- No durable database persistence across container restarts
+- No durable persistence of rooms, participants, or votes; only the aggregate rooms-created counter is persistent.
 - No advanced permissions model
 - No admin dashboard
 - No heavy frontend build toolchain unless clearly necessary
@@ -101,14 +111,12 @@ When making changes, keep these files aligned:
 - If adding features, prefer extending the existing REST + WebSocket model rather than replacing it.
 - If adding infrastructure, keep local startup simple.
 - If introducing new behavior, update this file so the next agent has an accurate spec.
-- If the implementation diverges from `tz.md`, document the reason here.
 - Do not reintroduce `average` into the reveal stats unless the product requirements explicitly change.
 - Do not reintroduce a dedicated `Restart` button unless the product requirements explicitly change.
 - Keep the app working under the `/poker` path prefix unless deployment requirements explicitly change.
 
-## Suggested Next Enhancements
+## Verification
 
-- Add healthchecks for container/runtime verification.
-- Add Nginx example config for reverse proxying HTTP and WebSocket traffic.
-- Add basic automated tests for room lifecycle and stats calculation.
-- Add configurable planning decks if needed.
+- Run `python -m unittest discover -v` and `node --check static/app.js` before deployment.
+- `instructions.md` is the authoritative product specification; no historical external spec is required.
+- Nginx proxy configuration is documented in README.md. Preserve the named counter volume during deployments.

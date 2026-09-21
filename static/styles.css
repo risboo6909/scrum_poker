@@ -243,6 +243,22 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.auto-reveal-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.auto-reveal-control input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .copy-link-button {
   width: 38px;
   height: 38px;
@@ -339,15 +355,21 @@ button:disabled {
 }
 
 .flip-card {
-  overflow: hidden;
-  border-radius: 16px;
+  width: 112px;
+  max-width: 100%;
+  margin: 8px auto 12px;
+  perspective: 800px;
 }
 
 .flip-card-inner {
   position: relative;
   width: 100%;
-  height: 92px;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.08));
+  aspect-ratio: 5 / 7;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--flip-delay, 0ms);
 }
 
 .flip-face {
@@ -356,42 +378,105 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  border: 1px solid #d5cabc;
+  border-radius: 10px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg) translateZ(1px);
+  will-change: transform;
+  box-shadow: 0 2px 1px #b9ad9d, 0 8px 14px rgba(0, 0, 0, 0.18);
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 2rem;
   font-weight: 700;
-  transition:
-    opacity 0.42s ease,
-    transform 0.52s cubic-bezier(0.2, 0.8, 0.2, 1);
-  transition-delay: var(--flip-delay, 0ms);
 }
 
-.flip-front {
-  background:
-    linear-gradient(135deg, var(--accent-soft), transparent),
-    var(--input-bg);
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-  opacity: 1;
-  transform: scale(1) translateY(0);
+.playing-card-pattern {
+  border: 6px solid #fffaf0;
+  background-color: #8d302e;
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 5px, #f4d9b955 5px 6px, transparent 6px 11px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, #f4d9b955 5px 6px, transparent 6px 11px);
+  box-shadow: inset 0 0 0 2px #8d302e, inset 0 0 0 3px #f4d9b9,
+    0 2px 1px #b9ad9d, 0 8px 14px rgba(0, 0, 0, 0.18);
+}
+
+.playing-card-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border: 1px solid #f4d9b9;
+  border-radius: 40% / 25%;
+}
+
+.playing-card-pattern::after {
+  content: "♦";
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 58px;
+  color: #f4d9b9;
+  background: #8d302e;
+  border: 3px double #f4d9b9;
+  border-radius: 50%;
+  font-size: 1.8rem;
+}
+
+.playing-card-face {
+  background: linear-gradient(125deg, #ffffff, #fffaf0 65%, #f0e6d6);
+  color: #963b32;
+  padding: 26px 8px;
+  text-align: center;
+  font-size: 2rem;
+}
+
+.estimate-number {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  transform: scale(var(--estimate-scale, 1));
+  color: inherit;
+  text-shadow: 0 0 var(--estimate-blur, 3px)
+    color-mix(in srgb, var(--accent) var(--estimate-glow, 0%), transparent);
+  transition: transform 0.18s ease, text-shadow 0.18s ease;
 }
 
 .flip-back {
-  background: var(--accent);
-  color: #fff;
-  opacity: 0;
-  transform: scale(0.92) translateY(8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+  transform: rotateY(180deg) translateZ(1px);
 }
 
-.participant-card.revealed .flip-front {
-  opacity: 0;
-  transform: scale(0.9) translateY(-10px);
+.participant-card.revealed .flip-card-inner {
+  transform: rotateY(180deg);
 }
 
-.participant-card.revealed .flip-back {
-  opacity: 1;
-  transform: scale(1) translateY(0);
+/* The current participant sees their own card turn as soon as they vote. */
+.participant-card.own-card-selected .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Chrome reliably starts this explicit animation after the DOM is painted. */
+.participant-card.card-turning .flip-card-inner {
+  animation: card-turn 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes card-turn {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(180deg); }
+}
+
+.participant-card.card-turning-again .flip-card-inner {
+  animation: card-turn-again 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes card-turn-again {
+  from { transform: rotateY(180deg); }
+  to { transform: rotateY(540deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .participant-card.card-turning .flip-card-inner,
+  .participant-card.card-turning-again .flip-card-inner {
+    animation: none;
+  }
 }
 
 .vote-grid {
@@ -401,9 +486,13 @@ button:disabled {
 }
 
 .vote-card {
-  min-height: 72px;
-  background: var(--input-bg);
-  color: var(--text);
+  position: relative;
+  min-height: 112px;
+  border-radius: 9px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  background: linear-gradient(125deg, #fff, #fffaf0);
+  color: #963b32;
   border: 1px solid var(--panel-border);
   box-shadow: 0 8px 18px rgba(84, 54, 33, 0.08);
   transition:
@@ -549,4 +638,45 @@ a {
     padding: 20px;
     border-radius: 20px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-card-inner,
+  .vote-card {
+    transition: none;
+    transition-delay: 0ms;
+  }
+}
+
+html[data-theme="dark"] .playing-card-face,
+html[data-theme="dark"] .vote-card {
+  background: linear-gradient(135deg, #342b27, #251f1c);
+  color: #efb59c;
+  border-color: #655044;
+}
+
+html[data-theme="dark"] .vote-card.selected {
+  background: linear-gradient(135deg, #55382d, #38271f);
+  color: #ffe0cd;
+  border-color: var(--accent);
+}
+
+html[data-theme="dark"] .playing-card-pattern {
+  border-color: #392e27;
+  background-color: #542727;
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 5px, #be957d33 5px 6px, transparent 6px 11px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, #be957d33 5px 6px, transparent 6px 11px);
+  box-shadow: inset 0 0 0 2px #542727, inset 0 0 0 3px #997760,
+    0 2px 1px #191513, 0 8px 14px #00000040;
+}
+
+html[data-theme="dark"] .playing-card-pattern::before {
+  border-color: #997760;
+}
+
+html[data-theme="dark"] .playing-card-pattern::after {
+  background: #542727;
+  color: #bd9980;
+  border-color: #997760;
 }

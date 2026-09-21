@@ -16,7 +16,7 @@
       type="image/png"
       href="{{ base_prefix }}/static/favicon.png"
     />
-    <link rel="stylesheet" href="{{ base_prefix }}/static/styles.css" />
+    <link rel="stylesheet" href="{{ base_prefix }}/static/styles.css?v={{ asset_version }}" />
   </head>
   <body>
     <main class="page">
@@ -56,7 +56,7 @@
               <button type="submit">Join room</button>
             </form>
 
-            <p class="startup-stat muted">Rooms created since startup: {{ total_rooms_created }}</p>
+            <p class="startup-stat muted">Total rooms created: {{ total_rooms_created }}</p>
           </div>
 
           <aside class="landing-art" aria-hidden="true">
@@ -101,6 +101,10 @@
           <div id="leader-actions" class="actions hidden">
             <button id="start-button" type="button">Start vote</button>
             <button id="reveal-button" type="button" class="secondary">Reveal cards</button>
+            <label class="auto-reveal-control">
+              <input id="auto-reveal-toggle" type="checkbox" />
+              <span>Reveal automatically when everyone has voted</span>
+            </label>
           </div>
 
           <section class="stack">
@@ -140,6 +144,6 @@
       </section>
     </main>
 
-    <script src="{{ base_prefix }}/static/app.js"></script>
+    <script src="{{ base_prefix }}/static/app.js?v={{ asset_version }}"></script>
   </body>
   </html>

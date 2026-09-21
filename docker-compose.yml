@@ -6,3 +6,9 @@ services:
     environment:
       BASE_PATH: "/poker"
       PORT: "8000"
+      COUNTER_DB_PATH: "/data/counter.sqlite3"
+    volumes:
+      - counter-data:/data
+
+volumes:
+  counter-data:
