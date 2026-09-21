@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
-from test_auto_reveal import AutoRevealTests, poker
+from tests.test_auto_reveal import AutoRevealTests, poker
 
 
 class LifecycleTests(AutoRevealTests):
@@ -61,6 +61,15 @@ class LifecycleTests(AutoRevealTests):
         self.assertEqual(self.action("vote", value=0.7).status_code, 400)
         self.assertEqual(self.client.get(self.api("/health")).get_json(), {"status": "ok"})
         self.assertEqual(self.client.post(self.api("/api/rooms"), json={"name":"x","deck":"bad"}).status_code, 400)
+
+    def test_frontend_files_resolve_from_project_root(self):
+        response = self.client.get(self.api("/"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Round controls", response.data)
+        response = self.client.get(self.api("/static/app.js"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"renderParticipants", response.data)
+        response.close()
 
     def test_kick_unvoted_reveals_and_new_round_retains_option(self):
         self.rid, self.pid, guest = self.create_room_with_guest()

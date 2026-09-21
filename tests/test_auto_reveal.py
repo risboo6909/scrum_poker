@@ -6,7 +6,7 @@ import unittest
 _counter_dir = tempfile.TemporaryDirectory()
 os.environ["COUNTER_DB_PATH"] = os.path.join(_counter_dir.name, "counter.sqlite3")
 
-import app as poker
+from src import app as poker
 
 
 class AutoRevealTests(unittest.TestCase):

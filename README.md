@@ -26,7 +26,7 @@ Take a look at it live: https://risboo6909.org/poker/
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python -m src.app
 ```
 
 By default, the app is available at `http://localhost:8000/`. Compose configures `http://localhost:8000/poker/`.
@@ -62,7 +62,7 @@ docker compose up --build
 
 ## Verification
 
-Run `python -m unittest discover -v` after installing the requirements. Tests cover private sessions, votes, round transitions, room expiry/capacity, auto-reveal, statistics, concurrency, and counter persistence.
+Python application code lives in `src/`; regression tests live in `tests/`. Run `python -m unittest discover -s tests -t . -v` from the project root after installing the requirements. Tests cover private sessions, votes, round transitions, room expiry/capacity, auto-reveal, statistics, concurrency, and counter persistence.
 
 `GET /health` (or `/poker/health` with the Compose prefix) checks both SQLite stores. The Docker image includes a healthcheck. Run one application process: room storage is intentionally in memory. Session cookies are HttpOnly and SameSite=Strict, and Secure when served through HTTPS. Nginx must overwrite `X-Forwarded-Proto` and preserve `Host`, as in the example below.
 

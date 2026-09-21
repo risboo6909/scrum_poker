@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 from flask import Flask, g, jsonify, render_template, request, send_from_directory
 from flask_sock import Sock
-from counter import RoomCounter
+from .counter import RoomCounter
 
 
 BASE_PATH = os.environ.get("BASE_PATH", "").strip().strip("/")
@@ -36,7 +36,9 @@ DECKS = {
     },
 }
 
-app = Flask(__name__, static_folder="static", static_url_path=None)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+app = Flask(__name__, static_folder=str(PROJECT_ROOT / "static"),
+            template_folder=str(PROJECT_ROOT / "templates"), static_url_path=None)
 sock = Sock(app)
 connections = {}
 connections_lock = threading.Lock()
@@ -106,12 +108,12 @@ def private_api_response(response):
         response.headers["Cache-Control"] = "no-store"
     return response
 room_counter = RoomCounter(
-    os.environ.get("COUNTER_DB_PATH", str(Path(__file__).parent / "data" / "counter.sqlite3")),
+    os.environ.get("COUNTER_DB_PATH", str(PROJECT_ROOT / "data" / "counter.sqlite3")),
     initial_value=int(os.environ.get("COUNTER_INITIAL_VALUE", "0")),
 )
 ASSET_VERSION = str(max(
-    (Path(__file__).parent / "static" / "app.js").stat().st_mtime_ns,
-    (Path(__file__).parent / "static" / "styles.css").stat().st_mtime_ns,
+    (PROJECT_ROOT / "static" / "app.js").stat().st_mtime_ns,
+    (PROJECT_ROOT / "static" / "styles.css").stat().st_mtime_ns,
 ))
 
 

@@ -5,7 +5,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from counter import RoomCounter
+from src.counter import RoomCounter
 
 
 class CounterTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class CounterTests(unittest.TestCase):
             counter.increment()
             result = subprocess.check_output([
                 sys.executable, "-c",
-                "from counter import RoomCounter; import sys; print(RoomCounter(sys.argv[1], 999).read())",
+                "from src.counter import RoomCounter; import sys; print(RoomCounter(sys.argv[1], 999).read())",
                 str(path),
             ], text=True)
             self.assertEqual(result.strip(), "13")

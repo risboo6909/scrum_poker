@@ -81,7 +81,9 @@ Current behavior:
 When making changes, keep these files aligned:
 
 - [instructions.md](/Users/risboo6909/ScrumPoker/instructions.md): English agent-facing product and engineering spec
-- [app.py](/Users/risboo6909/ScrumPoker/app.py): backend API, room lifecycle, WebSocket broadcast
+- [src/app.py](/Users/risboo6909/ScrumPoker/src/app.py): backend API, room lifecycle, WebSocket broadcast
+- [src/counter.py](/Users/risboo6909/ScrumPoker/src/counter.py): persistent aggregate counter
+- [tests/](/Users/risboo6909/ScrumPoker/tests): Python regression tests
 - [templates/index.html](/Users/risboo6909/ScrumPoker/templates/index.html): server-rendered shell and labels
 - [static/app.js](/Users/risboo6909/ScrumPoker/static/app.js): frontend state and user actions
 - [static/styles.css](/Users/risboo6909/ScrumPoker/static/styles.css): visual theme, animation, and layout
@@ -120,6 +122,7 @@ When making changes, keep these files aligned:
 
 ## Verification
 
-- Run `python -m unittest discover -v` and `node --check static/app.js` before deployment.
+- Start from the project root with `python -m src.app`.
+- Run `python -m unittest discover -s tests -t . -v` and `node --check static/app.js` before deployment.
 - `instructions.md` is the authoritative product specification; no historical external spec is required.
 - Nginx proxy configuration is documented in README.md. Preserve the named counter volume during deployments.

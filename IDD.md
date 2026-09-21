@@ -136,7 +136,7 @@ Shared room operations are serialized with a reentrant lock. Socket receive loop
 
 ## 7. Acceptance criteria
 
-Backend regression coverage is in `test_room_lifecycle.py`, `test_auto_reveal.py`, and `test_counter.py`. For visual and multi-browser verification, use separate browser profiles so local storage and session cookies remain independent.
+Python application code lives in `src/`. Backend regression coverage is in `tests/test_room_lifecycle.py`, `tests/test_auto_reveal.py`, and `tests/test_counter.py`. For visual and multi-browser verification, use separate browser profiles so local storage and session cookies remain independent.
 
 | Check | Expected result |
 | --- | --- |
