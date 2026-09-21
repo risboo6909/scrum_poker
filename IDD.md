@@ -52,6 +52,8 @@ A creator becomes the room leader. Visitors join through the shared URL using a 
 
 Only the leader starts a vote or reveals cards. During voting, participants, including the leader, may submit or replace their own estimate. Each participant sees their selected card; other participants may see voting status but must not receive the numeric estimate through the UI or backend interfaces before reveal.
 
+Starting a vote requires at least two connected participants, including the leader, enforced in both the UI and backend. While alone, the leader sees “Waiting for another participant”. Disconnecting during an active round does not cancel that round.
+
 Reveal displays submitted estimates and aggregate statistics. Missing votes do not become zeroes. Selecting an estimate turns over only the current participant's card, beside their own name; other participants continue to see its back until reveal. Starting another vote clears the previous selections and results. Use `Start vote` for that action; do not add an average or a dedicated Restart button unless requirements change.
 
 ```mermaid

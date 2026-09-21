@@ -50,6 +50,7 @@ Current behavior:
 - Other users join by opening that room URL and submitting their name.
 - Opening a room URL for a room that does not exist immediately shows `Room not found` and disables the join form.
 - The leader can start voting and reveal cards.
+- Starting voting requires at least two connected participants, including the leader. The UI disables Start vote while waiting, and the backend enforces the same rule. A round already in progress continues if someone disconnects.
 - The leader can optionally enable automatic reveal. When enabled, the server reveals as soon as every participant currently in the room has submitted a numeric estimate or `Need context`.
 - Starting a new vote round is done with `Start vote`; there is no separate `Restart` button in the UI.
 - The first round is 1; starting after reveal increments it. Starting during voting and revealing outside voting return 409. Legacy `/restart` is retained only from revealed to lobby and increments once.

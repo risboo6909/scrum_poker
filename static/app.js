@@ -47,6 +47,7 @@ const messageNode = document.querySelector("#message");
 const themeToggle = document.querySelector("#theme-toggle");
 
 const startButton = document.querySelector("#start-button");
+const startVoteHint = document.querySelector("#start-vote-hint");
 const revealButton = document.querySelector("#reveal-button");
 const autoRevealToggle = document.querySelector("#auto-reveal-toggle");
 const endSessionButton = document.querySelector("#end-session-button");
@@ -437,7 +438,13 @@ function renderLeaderControls() {
     return;
   }
 
-  startButton.disabled = state.room.phase === "voting";
+  const onlineParticipants = state.room.participants.filter((participant) => participant.isOnline);
+  const canStart = onlineParticipants.length >= 2 && !!currentParticipant()?.isOnline;
+  startButton.disabled = state.room.phase === "voting" || !canStart;
+  startVoteHint.classList.toggle("hidden", state.room.phase === "voting" || canStart);
+  startVoteHint.textContent = currentParticipant()?.isOnline
+    ? "Waiting for another participant"
+    : "Connecting to room…";
   revealButton.disabled = state.room.phase !== "voting";
   autoRevealToggle.checked = !!state.room.autoReveal;
 }

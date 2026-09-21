@@ -9,6 +9,7 @@ Take a look at it live: https://risboo6909.org/poker/
 - room creation by a leader with a shareable URL
 - participant join flow by room link
 - leader-controlled voting start
+- starting a round requires at least two connected participants, including the leader
 - optional automatic reveal when every current participant has voted
 - hidden votes until `Reveal cards`
 - participant votes plus median and most common vote after reveal

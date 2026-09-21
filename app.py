@@ -713,6 +713,13 @@ def start_vote(room_id):
     room = db.execute("SELECT phase, round_number FROM rooms WHERE id = ?", (room_id,)).fetchone()
     if room["phase"] == "voting":
         return error("Voting is already in progress", 409)
+    online_ids = online_participant_ids(room_id)
+    participant_ids = {row["id"] for row in db.execute(
+        "SELECT id FROM participants WHERE room_id = ?", (room_id,)
+    ).fetchall()}
+    connected_ids = online_ids & participant_ids
+    if participant_id not in connected_ids or len(connected_ids) < 2:
+        return error("At least two connected participants are required to start voting", 409)
     prune_inactive_participants(room_id, keep_voted=False)
     db.execute(
         "DELETE FROM votes WHERE room_id = ? AND round_number = ?",

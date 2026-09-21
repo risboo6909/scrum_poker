@@ -10,6 +10,12 @@ class LifecycleTests(AutoRevealTests):
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.rid, self.pid = data["roomId"], data["participantId"]
+        guest = self.guest.post(self.api(f"/api/rooms/{self.rid}/join"), json={"name":"Guest"}).get_json()
+        self.guest_id = guest["participantId"]
+        self.online = {self.pid, self.guest_id}
+        presence = patch.object(poker, "online_participant_ids", side_effect=lambda _: self.online)
+        presence.start()
+        self.addCleanup(presence.stop)
         return data
 
     def action(self, action, **fields):
@@ -63,7 +69,10 @@ class LifecycleTests(AutoRevealTests):
             self.action("start")
             self.assertEqual(self.action("vote", value=5).get_json()["room"]["phase"], "voting")
             self.assertEqual(self.action("kick", targetParticipantId=guest).get_json()["room"]["phase"], "revealed")
-            next_round = self.action("start").get_json()["room"]
+            self.assertEqual(self.action("start").status_code, 409)
+            replacement = self.guest.post(self.api(f"/api/rooms/{self.rid}/join"), json={"name":"Replacement"}).get_json()["participantId"]
+            with patch.object(poker, "online_participant_ids", return_value={self.pid,replacement}):
+                next_round = self.action("start").get_json()["room"]
             self.assertTrue(next_round["autoReveal"])
             self.assertIsNone(next_round["stats"])
 
@@ -82,7 +91,24 @@ class LifecycleTests(AutoRevealTests):
         self.room()
         self.action("start")
         self.assertEqual(self.action("vote", value=5).get_json()["room"]["phase"], "voting")
+        self.guest.post(self.api(f"/api/rooms/{self.rid}/vote"), json={"participantId":self.guest_id,"value":5})
         self.assertEqual(self.action("auto-reveal", enabled=True).get_json()["room"]["phase"], "revealed")
+
+    def test_start_requires_two_connected_members_including_leader(self):
+        self.room()
+        self.online = {self.pid}
+        self.assertEqual(self.action("start").status_code,409)
+        self.online = {self.guest_id, "not-a-member"}
+        self.assertEqual(self.action("start").status_code,409)
+        self.online = {self.pid, self.guest_id}
+        self.assertEqual(self.action("start").status_code,200)
+        self.online = {self.pid}
+        self.assertEqual(self.action("vote",value=3).get_json()["room"]["phase"],"voting")
+        self.action("reveal")
+        self.assertEqual(self.action("start").status_code,409)
+        room = self.client.get(self.api(f"/api/rooms/{self.rid}")).get_json()["room"]
+        self.assertEqual(room["roundNumber"],1)
+        self.assertEqual(room["phase"],"revealed")
 
     def test_stats_and_confetti(self):
         self.assertEqual(poker.compute_stats([3,3,5,5])["median"],4)
