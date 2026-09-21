@@ -57,18 +57,26 @@ Starting a vote requires at least two connected participants, including the lead
 Reveal displays submitted estimates and aggregate statistics. Missing votes do not become zeroes. Selecting an estimate turns over only the current participant's card, beside their own name; other participants continue to see its back until reveal. Starting another vote clears the previous selections and results. Use `Start vote` for that action; do not add an average or a dedicated Restart button unless requirements change.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Lobby: Create room
-    Lobby --> Voting: Leader starts vote
-    Voting --> Voting: Participants choose or revise
-    Voting --> Revealed: Leader reveals
-    Revealed --> Voting: Leader starts next vote
-    Lobby --> [*]: End or expire
-    Voting --> [*]: End or expire
-    Revealed --> [*]: End or expire
+flowchart TD
+    room["Create a room and share the link"]
+    ready["Ready to start<br/>Leader and at least one teammate connected"]
+    vote["Vote privately<br/>Everyone picks or changes their own card"]
+    results["See results together<br/>Compare cards, median and most common vote"]
+    discuss["Discuss differences"]
+
+    room --> ready
+    ready -->|Leader clicks Start vote| vote
+    vote -->|Leader clicks Reveal cards| results
+    vote -->|Automatic reveal enabled and all required votes received| results
+    results --> discuss
+    discuss -->|Next round| ready
 ```
 
-The backend enforces these transitions. Round 1 starts in the lobby; each start after reveal increments the round. The legacy restart endpoint accepts only a revealed round, increments once, and returns to the lobby.
+Each round follows the same loop. Starting the next round clears the previous votes and increments the round number; the first round is 1. While waiting to start again, the previous results remain visible.
+
+Automatic reveal waits for votes from connected participants and the leader. A departed non-leader without a vote does not block it; an abstention counts as a response.
+
+At any stage, the leader can end the room, or the room can expire through inactivity.
 
 ### Understand the result
 

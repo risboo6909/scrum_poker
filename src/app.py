@@ -851,39 +851,6 @@ def reveal_votes(room_id):
     return jsonify({"room": serialize_room(room_id)})
 
 
-@app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/restart")
-def restart_vote(room_id):
-    if not room_exists(room_id):
-        return error("Room not found", 404)
-
-    payload = request.get_json(silent=True) or {}
-    participant_id = payload.get("participantId")
-    _, leader_error = require_leader(room_id, participant_id)
-    if leader_error:
-        return leader_error
-
-    db = get_db()
-    room = db.execute("SELECT phase, round_number FROM rooms WHERE id = ?", (room_id,)).fetchone()
-    if room["phase"] != "revealed":
-        return error("Reveal the round before restarting", 409)
-    db.execute(
-        "DELETE FROM votes WHERE room_id = ? AND round_number = ?",
-        (room_id, room["round_number"]),
-    )
-    db.execute(
-        """
-        UPDATE rooms
-        SET phase = 'lobby', round_number = round_number + 1
-        WHERE id = ?
-        """,
-        (room_id,),
-    )
-    db.commit()
-    touch_room(room_id)
-    broadcast_room(room_id)
-    return jsonify({"room": serialize_room(room_id)})
-
-
 @app.post(f"{BASE_PREFIX}/api/rooms/<room_id>/kick")
 def kick_participant(room_id):
     if not room_exists(room_id):

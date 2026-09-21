@@ -31,7 +31,7 @@ class LifecycleTests(AutoRevealTests):
         self.assertIsNone(public["viewer"]["currentVote"])
         self.assertNotIn("credential", str(public))
         self.assertEqual(self.guest.get(self.api(f"/api/rooms/{self.rid}?participantId={self.pid}")).status_code, 403)
-        for action in ("start", "reveal", "restart", "end", "kick", "vote", "auto-reveal"):
+        for action in ("start", "reveal", "end", "kick", "vote", "auto-reveal"):
             self.assertEqual(self.guest.post(self.api(f"/api/rooms/{self.rid}/{action}"),
                                             json={"participantId": self.pid}).status_code, 403)
         own = self.client.get(self.api(f"/api/rooms/{self.rid}?participantId={self.pid}")).get_json()
@@ -48,10 +48,12 @@ class LifecycleTests(AutoRevealTests):
         self.assertEqual(self.action("vote", value=3).status_code, 200)
         self.assertEqual(self.action("reveal").status_code, 200)
         self.assertEqual(self.action("reveal").status_code, 409)
-        self.assertEqual(self.action("start").get_json()["room"]["roundNumber"], 2)
-        self.assertEqual(self.action("restart").status_code, 409)
+        next_round = self.action("start").get_json()["room"]
+        self.assertEqual(next_round["roundNumber"], 2)
+        self.assertEqual(next_round["phase"], "voting")
+        self.assertIsNone(next_round["stats"])
+        self.assertTrue(all(not participant["hasVoted"] for participant in next_round["participants"]))
         self.action("reveal")
-        self.assertEqual(self.action("restart").get_json()["room"]["roundNumber"], 3)
         self.assertEqual(self.action("start").get_json()["room"]["roundNumber"], 3)
 
     def test_pu_deck_and_health(self):
