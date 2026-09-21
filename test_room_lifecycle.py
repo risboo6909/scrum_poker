@@ -160,6 +160,41 @@ class LifecycleTests(AutoRevealTests):
             if allowed:
                 self.assertEqual(poker.json.loads(socket.messages[0])["viewer"]["currentVote"],8)
 
+    def test_left_badge_broadcast_reconnect_and_other_tab(self):
+        self.rid, self.pid, guest_id = self.create_room_with_guest()
+        class Socket:
+            def __init__(self, receive=None): self.messages=[]; self.on_receive=receive
+            def send(self, data): self.messages.append(poker.json.loads(data))
+            def receive(self):
+                if self.on_receive: self.on_receive()
+                return None
+            def close(self): pass
+        leader_socket = Socket()
+        poker.add_connection(self.rid,self.pid,leader_socket)
+        cookie = self.guest.get_cookie(poker.cookie_name(self.rid),path=f"{poker.BASE_PREFIX}/")
+        def leave_after_start():
+            self.action("auto-reveal",enabled=True)
+            self.assertEqual(self.action("start").status_code,200)
+            self.action("vote",value=5)
+        def connect(socket):
+            with poker.app.test_request_context(self.api(f"/ws/rooms/{self.rid}?participantId={guest_id}"),
+                                               headers={"Cookie":f"{cookie.key}={cookie.value}"}):
+                poker.handle_room_socket(socket,self.rid)
+        connect(Socket(leave_after_start))
+        latest = leader_socket.messages[-1]["room"]
+        self.assertEqual(latest["phase"],"revealed")
+        guest = next(p for p in latest["participants"] if p["id"]==guest_id)
+        self.assertTrue(guest["hasLeft"])
+        self.assertFalse(guest["isOnline"])
+        reconnect = Socket()
+        connect(reconnect)
+        self.assertFalse(next(p for p in reconnect.messages[0]["room"]["participants"] if p["id"]==guest_id)["hasLeft"])
+        poker.add_connection(self.rid,guest_id,Socket())
+        connect(Socket())
+        guest = next(p for p in leader_socket.messages[-1]["room"]["participants"] if p["id"]==guest_id)
+        self.assertTrue(guest["isOnline"])
+        self.assertFalse(guest["hasLeft"])
+
     def test_abstention_prevents_confetti(self):
         self.rid,self.pid,guest_id=self.create_room_with_guest()
         with patch.object(poker,"online_participant_ids",return_value={self.pid,guest_id}):

@@ -87,6 +87,7 @@ Median and most common vote are required. Current code provides these concrete r
 
 - Push room updates in real time without manual refresh.
 - Label the current participant inline as `Name (You)`.
+- Show a Left badge to everyone after a participant's last socket disconnects; keep their card and submitted vote through the current round. Reconnecting clears the badge. Starting the next round removes offline non-leaders. Departed non-leaders without votes do not block automatic reveal; the leader's vote is still required.
 - Preserve the light/dark theme preference between visits.
 - Show total rooms created on the landing screen, persisted in a separate SQLite file and reloaded across restarts. Persist only the counter, not rooms, participants, or votes. Compose uses a named volume for this file.
 - Present cards with portrait proportions, a single centered estimate and patterned burgundy backs. Higher estimates make only the estimate numeral grow and glow; dark mode uses subdued dark faces and backs. Reveal with a 3D flip, respecting reduced-motion preferences; keep the viewer’s own selection visible before reveal. Confetti requires at least two participants, all with identical numeric votes and no abstentions or missing votes.

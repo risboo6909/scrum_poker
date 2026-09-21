@@ -289,18 +289,13 @@ function renderParticipants() {
   participantsNode.innerHTML = "";
   const viewer = currentParticipant();
   const canKickParticipants = !!state.viewer?.isLeader;
-  const visibleParticipants = state.room.participants.filter(
-    (participant) =>
-      participant.isOnline ||
-      participant.hasVoted ||
-      state.room.phase === "revealed" ||
-      participant.id === state.participantId
-  );
+  const visibleParticipants = state.room.participants;
   const shouldAnimateReveal = lastRenderedPhase !== "revealed" && state.room.phase === "revealed";
 
   visibleParticipants.forEach((participant, index) => {
     const item = document.createElement("article");
     item.className = "participant-card";
+    item.classList.toggle("participant-left", !!participant.hasLeft);
     const isViewerCard = participant.id === state.participantId;
     if (state.room.phase !== "revealed" && (participant.hasVoted || participant.hasAbstained)) {
       item.classList.add("participant-card-voted");
@@ -387,6 +382,13 @@ function renderParticipants() {
     flipCard.appendChild(flipInner);
 
     item.appendChild(title);
+    if (participant.hasLeft) {
+      const presence = document.createElement("span");
+      presence.className = "participant-left-label";
+      presence.textContent = "Left";
+      presence.title = "Disconnected from the room";
+      item.appendChild(presence);
+    }
     item.appendChild(flipCard);
     item.appendChild(labelNode);
     item.appendChild(meta);

@@ -136,6 +136,7 @@ def get_db():
                 room_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL,
+                has_left INTEGER NOT NULL DEFAULT 0,
                 is_leader INTEGER NOT NULL DEFAULT 0,
                 joined_order INTEGER NOT NULL,
                 FOREIGN KEY(room_id) REFERENCES rooms(id)
@@ -387,10 +388,14 @@ def reveal_if_everyone_voted(db, room_id, round_number):
     counts = db.execute(
         """
         SELECT
-            (SELECT COUNT(*) FROM participants WHERE room_id = ?) AS participants,
+            (SELECT COUNT(*) FROM participants p WHERE room_id = ? AND
+                (has_left = 0 OR is_leader = 1 OR EXISTS (
+                    SELECT 1 FROM votes v WHERE v.participant_id = p.id
+                    AND v.room_id = p.room_id AND v.round_number = ?
+                ))) AS participants,
             (SELECT COUNT(*) FROM votes WHERE room_id = ? AND round_number = ?) AS votes
         """,
-        (room_id, room_id, round_number),
+        (room_id, round_number, room_id, round_number),
     ).fetchone()
     if counts["participants"] > 0 and counts["participants"] == counts["votes"]:
         db.execute("UPDATE rooms SET phase = 'revealed' WHERE id = ?", (room_id,))
@@ -421,6 +426,7 @@ def serialize_room(room_id):
             p.id,
             p.name,
             p.is_leader,
+            p.has_left,
             v.value,
             COALESCE(v.abstained, 0) AS abstained
         FROM participants p
@@ -451,6 +457,7 @@ def serialize_room(room_id):
                 "name": participant["name"],
                 "isLeader": bool(participant["is_leader"]),
                 "isOnline": participant["id"] in online_ids,
+                "hasLeft": bool(participant["has_left"]) and participant["id"] not in online_ids,
                 "hasVoted": has_vote,
                 "hasAbstained": abstained,
                 "vote": vote_value if room["phase"] == "revealed" else None,
@@ -576,6 +583,8 @@ def handle_room_socket(ws, room_id):
             ws.close()
             return
         touch_room(room_id)
+        get_db().execute("UPDATE participants SET has_left = 0 WHERE id = ?", (participant_id,))
+        get_db().commit()
         add_connection(room_id, participant_id, ws)
         broadcast_room(room_id)
 
@@ -587,7 +596,10 @@ def handle_room_socket(ws, room_id):
     finally:
         with state_lock:
             remove_connection(room_id, ws)
-            prune_inactive_participants(room_id, keep_voted=True)
+            if participant_id not in online_participant_ids(room_id):
+                get_db().execute("UPDATE participants SET has_left = 1 WHERE id = ? AND room_id = ?",
+                                 (participant_id, room_id))
+                get_db().commit()
             check_auto_reveal(room_id)
             broadcast_room(room_id)
 

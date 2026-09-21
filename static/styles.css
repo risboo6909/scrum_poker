@@ -357,6 +357,20 @@ button:disabled {
   position: relative;
 }
 
+.participant-card.participant-left {
+  border-style: dashed;
+}
+
+.participant-left-label {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .participant-card-voted {
   border-color: color-mix(in srgb, var(--accent) 68%, var(--panel-border));
   background:

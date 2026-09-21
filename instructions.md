@@ -62,6 +62,7 @@ Current behavior:
 - Votes are hidden until reveal.
 - Before reveal, each participant can see their own selected card on their own participant card, while other participants still only see a hidden state.
 - The current user is labeled inline in the participant list as `Name (You)`.
+- Disconnected participants remain visible to everyone with a Left badge and dashed card border. Reconnecting clears the badge. Offline non-leaders are cleared when the next round starts; their existing votes remain through reveal. An unvoted departed non-leader does not block auto-reveal. An absent leader still must have voted for auto-reveal to complete.
 - After reveal, the UI shows participant votes plus `median` and `most common vote`.
 - Room updates are pushed in real time over WebSocket.
 - Rooms expire automatically after inactivity.
