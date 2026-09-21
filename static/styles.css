@@ -243,6 +243,35 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.round-controls {
+  padding: 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.round-controls h2 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+}
+
+.round-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.round-hint {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+}
+
+.round-settings {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+
 .auto-reveal-control {
   display: inline-flex;
   align-items: center;
@@ -252,9 +281,22 @@ button:disabled {
   cursor: pointer;
 }
 
+.auto-reveal-control > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.auto-reveal-control strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .auto-reveal-control input {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
   margin: 0;
   accent-color: var(--accent);
 }

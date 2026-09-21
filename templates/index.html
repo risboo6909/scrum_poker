@@ -98,15 +98,23 @@
             </div>
           </div>
 
-          <div id="leader-actions" class="actions hidden">
-            <button id="start-button" type="button">Start vote</button>
-            <span id="start-vote-hint" class="muted hidden" role="status">Waiting for another participant</span>
-            <button id="reveal-button" type="button" class="secondary">Reveal cards</button>
-            <label class="auto-reveal-control">
-              <input id="auto-reveal-toggle" type="checkbox" />
-              <span>Reveal automatically when everyone has voted</span>
-            </label>
-          </div>
+          <section id="leader-actions" class="round-controls hidden" aria-labelledby="round-controls-title">
+            <h2 id="round-controls-title">Round controls</h2>
+            <div class="round-buttons">
+              <button id="start-button" type="button" aria-describedby="start-vote-hint">Start vote</button>
+              <button id="reveal-button" type="button" class="secondary">Reveal cards</button>
+            </div>
+            <p id="start-vote-hint" class="round-hint muted hidden" role="status">Waiting for another participant</p>
+            <div class="round-settings">
+              <label class="auto-reveal-control">
+                <input id="auto-reveal-toggle" type="checkbox" aria-describedby="auto-reveal-description" />
+                <span>
+                  <strong>Automatic reveal</strong>
+                  <span id="auto-reveal-description">Reveal cards when everyone has voted</span>
+                </span>
+              </label>
+            </div>
+          </section>
 
           <section class="stack">
             <div class="section-header">

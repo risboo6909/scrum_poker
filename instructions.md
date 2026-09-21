@@ -52,6 +52,7 @@ Current behavior:
 - The leader can start voting and reveal cards.
 - Starting voting requires at least two connected participants, including the leader. The UI disables Start vote while waiting, and the backend enforces the same rule. A round already in progress continues if someone disconnects.
 - The leader can optionally enable automatic reveal. When enabled, the server reveals as soon as every participant currently in the room has submitted a numeric estimate or `Need context`.
+- Leader controls are grouped in a Round controls panel: action buttons together, waiting status below them, and automatic reveal in a separate settings row.
 - Starting a new vote round is done with `Start vote`; there is no separate `Restart` button in the UI.
 - The first round is 1; starting after reveal increments it. Starting during voting and revealing outside voting return 409. Legacy `/restart` is retained only from revealed to lobby and increments once.
 - Votes must be finite JSON numbers exactly present in the room deck, or `abstain`; strings and booleans are rejected.
