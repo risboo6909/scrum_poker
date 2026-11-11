@@ -140,6 +140,7 @@ def get_db():
                 credential_hash TEXT NOT NULL,
                 has_left INTEGER NOT NULL DEFAULT 0,
                 is_leader INTEGER NOT NULL DEFAULT 0,
+                is_spectator INTEGER NOT NULL DEFAULT 0,
                 joined_order INTEGER NOT NULL,
                 FOREIGN KEY(room_id) REFERENCES rooms(id)
             );
@@ -390,7 +391,7 @@ def reveal_if_everyone_voted(db, room_id, round_number):
     counts = db.execute(
         """
         SELECT
-            (SELECT COUNT(*) FROM participants p WHERE room_id = ? AND
+            (SELECT COUNT(*) FROM participants p WHERE room_id = ? AND is_spectator = 0 AND
                 (has_left = 0 OR is_leader = 1 OR EXISTS (
                     SELECT 1 FROM votes v WHERE v.participant_id = p.id
                     AND v.room_id = p.room_id AND v.round_number = ?
@@ -428,6 +429,7 @@ def serialize_room(room_id):
             p.id,
             p.name,
             p.is_leader,
+            p.is_spectator,
             p.has_left,
             v.value,
             COALESCE(v.abstained, 0) AS abstained
@@ -458,6 +460,7 @@ def serialize_room(room_id):
                 "id": participant["id"],
                 "name": participant["name"],
                 "isLeader": bool(participant["is_leader"]),
+                "isSpectator": bool(participant["is_spectator"]),
                 "isOnline": participant["id"] in online_ids,
                 "hasLeft": bool(participant["has_left"]) and participant["id"] not in online_ids,
                 "hasVoted": has_vote,
@@ -468,7 +471,7 @@ def serialize_room(room_id):
 
     stats = compute_stats(revealed_values) if room["phase"] == "revealed" else None
     if stats:
-        stats["unanimous"] = stats["unanimous"] and len(revealed_values) == len(participants)
+        stats["unanimous"] = stats["unanimous"] and len(revealed_values) == sum(not p["is_spectator"] for p in participants)
     return {
         "id": room["id"],
         "phase": room["phase"],
@@ -499,6 +502,7 @@ def get_viewer(room_id, participant_id):
     return {
         "participantId": participant["id"] if participant else None,
         "isLeader": bool(participant["is_leader"]) if participant else False,
+        "isSpectator": bool(participant["is_spectator"]) if participant else False,
         "name": participant["name"] if participant else None,
         "currentVote": viewer_vote,
     }
@@ -665,6 +669,9 @@ def join_room(room_id):
     payload = request.get_json(silent=True) or {}
     name = payload.get("name")
     name = name.strip() if isinstance(name, str) else ""
+    spectator = payload.get("spectator", False)
+    if not isinstance(spectator, bool):
+        return error("Spectator must be true or false")
     if not name or len(name) > 40:
         return error("Name must contain 1 to 40 characters")
 
@@ -680,10 +687,10 @@ def join_room(room_id):
 
     db.execute(
         """
-        INSERT INTO participants (id, room_id, name, credential_hash, is_leader, joined_order)
-        VALUES (?, ?, ?, ?, 0, ?)
+        INSERT INTO participants (id, room_id, name, credential_hash, is_leader, is_spectator, joined_order)
+        VALUES (?, ?, ?, ?, 0, ?, ?)
         """,
-        (participant_id, room_id, name, hashlib.sha256(token.encode()).hexdigest(), joined_order),
+        (participant_id, room_id, name, hashlib.sha256(token.encode()).hexdigest(), int(spectator), joined_order),
     )
     db.commit()
     touch_room(room_id)
@@ -729,7 +736,7 @@ def start_vote(room_id):
         return error("Voting is already in progress", 409)
     online_ids = online_participant_ids(room_id)
     participant_ids = {row["id"] for row in db.execute(
-        "SELECT id FROM participants WHERE room_id = ?", (room_id,)
+        "SELECT id FROM participants WHERE room_id = ? AND is_spectator = 0", (room_id,)
     ).fetchall()}
     connected_ids = online_ids & participant_ids
     if participant_id not in connected_ids or len(connected_ids) < 2:
@@ -757,6 +764,8 @@ def submit_vote(room_id):
     participant = participant_in_room(room_id, participant_id)
     if not participant:
         return error("Participant not found in room", 404)
+    if participant["is_spectator"]:
+        return error("Spectators cannot vote", 403)
 
     vote_value = parse_vote_value(payload.get("value"))
     if vote_value is None:

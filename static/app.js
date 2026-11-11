@@ -218,6 +218,7 @@ function setEstimateContent(element, value) {
   element.textContent = "";
   const number = document.createElement("span");
   number.className = "estimate-number";
+  number.classList.toggle("estimate-label", value === abstainVoteValue);
   number.textContent = formatVoteLabel(value);
   element.appendChild(number);
   applyEstimateGlow(element, value);
@@ -333,6 +334,27 @@ function renderParticipants() {
       item.appendChild(kickButton);
     }
 
+    if (participant.isSpectator) {
+      item.appendChild(title);
+      const ghost = document.createElement("img");
+      ghost.className = "spectator-ghost";
+      ghost.src = `${basePath}/static/spectator-ghost.svg`;
+      ghost.alt = "";
+      item.appendChild(ghost);
+      const role = document.createElement("span");
+      role.className = "pill";
+      role.textContent = "spectator";
+      item.appendChild(role);
+      if (participant.hasLeft) {
+        const presence = document.createElement("span");
+        presence.className = "participant-left-label";
+        presence.textContent = "Left";
+        item.appendChild(presence);
+      }
+      participantsNode.appendChild(item);
+      return;
+    }
+
     const meta = document.createElement("span");
     meta.className = "muted";
 
@@ -440,7 +462,7 @@ function renderLeaderControls() {
     return;
   }
 
-  const onlineParticipants = state.room.participants.filter((participant) => participant.isOnline);
+  const onlineParticipants = state.room.participants.filter((participant) => participant.isOnline && !participant.isSpectator);
   const canStart = onlineParticipants.length >= 2 && !!currentParticipant()?.isOnline;
   startButton.disabled = state.room.phase === "voting" || !canStart;
   startVoteHint.classList.toggle("hidden", state.room.phase === "voting" || canStart);
@@ -455,9 +477,9 @@ function renderVotePanel() {
   const viewer = currentParticipant();
   const canVote = state.room.phase === "voting" && !!viewer;
   const viewerVote = state.viewer?.currentVote ?? null;
-  votePanel.classList.toggle("hidden", !viewer);
+  votePanel.classList.toggle("hidden", !viewer || viewer.isSpectator);
 
-  if (!viewer) {
+  if (!viewer || viewer.isSpectator) {
     return;
   }
 
@@ -507,7 +529,7 @@ function render() {
   roomLink.textContent = `${window.location.origin}${basePath}/room/${state.roomId}`;
   roomLink.href = roomLink.textContent;
   viewerLabel.textContent = state.viewer?.name
-    ? `${state.viewer.name}${state.viewer.isLeader ? " (leader)" : ""}`
+    ? `${state.viewer.name}${state.viewer.isLeader ? " (leader)" : state.viewer.isSpectator ? " (spectator)" : ""}`
     : "";
 
   renderParticipants();
@@ -613,16 +635,17 @@ async function createRoom(name) {
   connectRoomSocket();
 }
 
-async function joinRoom(name) {
+async function joinRoom(name, spectator = false) {
   const data = await api(`/api/rooms/${state.roomId}/join`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, spectator }),
   });
   state.participantId = data.participantId;
   state.room = data.room;
   state.viewer = {
     participantId: data.participantId,
     isLeader: false,
+    isSpectator: spectator,
     name,
     currentVote: null,
   };
@@ -665,7 +688,7 @@ joinForm.addEventListener("submit", async (event) => {
   const formData = new FormData(joinForm);
   try {
     clearMessage();
-    await joinRoom((formData.get("name") || "").toString().trim());
+    await joinRoom((formData.get("name") || "").toString().trim(), event.submitter?.value === "true");
   } catch (error) {
     setMessage(error.message, true);
   }

@@ -51,6 +51,20 @@ body {
     var(--bg);
 }
 
+body:has(#auth-view:not(.hidden)) {
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(255, 255, 255, 0.8), transparent 45%),
+    radial-gradient(ellipse at 85% 90%, rgba(180, 187, 194, 0.3), transparent 45%),
+    linear-gradient(135deg, #e8eaec, #d6d9dc);
+}
+
+:root[data-theme="dark"] body:has(#auth-view:not(.hidden)) {
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(100, 108, 116, 0.18), transparent 45%),
+    radial-gradient(ellipse at 85% 90%, rgba(10, 12, 16, 0.35), transparent 45%),
+    linear-gradient(135deg, #30343a, #1e2227);
+}
+
 button,
 input,
 select {
@@ -141,6 +155,43 @@ select {
 .hero h1,
 .section-header h2 {
   margin: 0;
+}
+
+.hero h1 {
+  font-size: 1.3rem;
+}
+
+.brand-name {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.brand-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.brand-letter {
+  display: inline-block;
+  animation: brand-letter-turn 0.7s ease-in-out both;
+  animation-delay: calc(var(--letter-index) * 0.07s);
+}
+
+@keyframes brand-letter-turn {
+  from { transform: rotateY(0); }
+  to { transform: rotateY(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-letter {
+    animation: none;
+  }
 }
 
 .eyebrow,
@@ -357,6 +408,15 @@ button:disabled {
   position: relative;
 }
 
+.spectator-ghost {
+  width: 112px;
+  max-width: 100%;
+  aspect-ratio: 5 / 7;
+  object-fit: contain;
+  padding: 12px;
+  margin: 8px auto 12px;
+}
+
 .participant-card.participant-left {
   border-style: dashed;
 }
@@ -494,6 +554,13 @@ button:disabled {
   text-shadow: 0 0 var(--estimate-blur, 3px)
     color-mix(in srgb, var(--accent) var(--estimate-glow, 0%), transparent);
   transition: transform 0.18s ease, text-shadow 0.18s ease;
+}
+
+.estimate-label {
+  max-width: 100%;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .flip-back {
