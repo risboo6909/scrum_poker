@@ -404,6 +404,9 @@ function renderParticipants() {
     flipCard.appendChild(flipInner);
 
     item.appendChild(title);
+    item.appendChild(flipCard);
+    item.appendChild(labelNode);
+    item.appendChild(meta);
     if (participant.hasLeft) {
       const presence = document.createElement("span");
       presence.className = "participant-left-label";
@@ -411,9 +414,6 @@ function renderParticipants() {
       presence.title = "Disconnected from the room";
       item.appendChild(presence);
     }
-    item.appendChild(flipCard);
-    item.appendChild(labelNode);
-    item.appendChild(meta);
     participantsNode.appendChild(item);
 
     if (state.room.phase === "revealed") item.classList.add("revealed");
