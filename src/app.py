@@ -113,6 +113,7 @@ room_counter = RoomCounter(
 )
 ASSET_VERSION = str(max(
     (PROJECT_ROOT / "static" / "app.js").stat().st_mtime_ns,
+    (PROJECT_ROOT / "static" / "snow.js").stat().st_mtime_ns,
     (PROJECT_ROOT / "static" / "styles.css").stat().st_mtime_ns,
 ))
 

@@ -72,10 +72,39 @@ select {
 }
 
 .page {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
+}
+
+.snowfall {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: rgba(109, 126, 142, 0.45);
+}
+
+:root[data-theme="dark"] .snowfall {
+  color: rgba(235, 244, 255, 0.7);
+}
+
+.snowflake {
+  position: absolute;
+  top: -2rem;
+  animation: snowfall var(--snow-duration) linear var(--snow-delay) infinite;
+}
+
+@keyframes snowfall {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(35px, calc(100vh + 4rem), 0) rotate(180deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowfall { display: none; }
 }
 
 .panel {

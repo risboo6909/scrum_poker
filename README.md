@@ -13,6 +13,7 @@ Take a look at it live: https://risboo6909.org/poker/
 - room creation by a leader with a shareable URL
 - participant join flow by room link
 - spectators can join from the room link to watch live without voting or affecting voting rules
+- seasonal background snowfall during December, based on the visitor's local date
 - leader-controlled voting start
 - starting a round requires at least two connected participants, including the leader
 - optional automatic reveal when every current participant has voted
