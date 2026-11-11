@@ -15,14 +15,14 @@ if (typeof document !== "undefined") {
       snow = document.createElement("div");
       snow.className = "snowfall";
       snow.setAttribute("aria-hidden", "true");
-      for (let i = 0; i < 28; i += 1) {
+      for (let i = 0; i < 56; i += 1) {
         const flake = document.createElement("span");
         flake.className = "snowflake";
         flake.textContent = "❄";
         flake.style.left = `${(i * 37) % 100}%`;
         flake.style.setProperty("--snow-duration", `${12 + (i % 7) * 2}s`);
         flake.style.setProperty("--snow-delay", `${-(i * 3) % 24}s`);
-        flake.style.fontSize = `${12 + (i % 4) * 4}px`;
+        flake.style.fontSize = `${8 + (i % 4) * 2}px`;
         snow.appendChild(flake);
       }
       document.body.prepend(snow);

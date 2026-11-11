@@ -95,12 +95,20 @@ select {
 .snowflake {
   position: absolute;
   top: -2rem;
+  --snow-sway: 30px;
   animation: snowfall var(--snow-duration) linear var(--snow-delay) infinite;
+}
+
+.snowflake:nth-child(even) {
+  --snow-sway: -30px;
 }
 
 @keyframes snowfall {
   from { transform: translate3d(0, 0, 0) rotate(0deg); }
-  to { transform: translate3d(35px, calc(100vh + 4rem), 0) rotate(180deg); }
+  25% { transform: translate3d(var(--snow-sway), 25vh, 0) rotate(45deg); }
+  50% { transform: translate3d(0, 50vh, 0) rotate(90deg); }
+  75% { transform: translate3d(var(--snow-sway), 75vh, 0) rotate(135deg); }
+  to { transform: translate3d(0, calc(100vh + 4rem), 0) rotate(180deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
