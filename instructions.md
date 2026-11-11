@@ -48,10 +48,11 @@ Current behavior:
 - Public participant IDs are not credentials. Create/join sets a private HttpOnly, SameSite=Strict room cookie (Secure over HTTPS); HTTP actions, private state, and WebSocket connections require the matching session. Only credential hashes are stored in memory.
 - Requests serialize shared room/database state with a reentrant lock; socket receive loops never hold it. Deploy one application process.
 - Other users join by opening that room URL and submitting their name.
+- A visitor may choose `Join as spectator` to watch live updates and revealed results. Spectators are shown with a ghost, cannot vote, and do not count toward the minimum voters, automatic reveal, statistics, or unanimity.
 - Opening a room URL for a room that does not exist immediately shows `Room not found` and disables the join form.
 - The leader can start voting and reveal cards.
-- Starting voting requires at least two connected participants, including the leader. The UI disables Start vote while waiting, and the backend enforces the same rule. A round already in progress continues if someone disconnects.
-- The leader can optionally enable automatic reveal. When enabled, the server reveals as soon as every participant currently in the room has submitted a numeric estimate or `Need context`.
+- Starting voting requires at least two connected voters, including the leader. The UI disables Start vote while waiting, and the backend enforces the same rule. A round already in progress continues if someone disconnects.
+- The leader can optionally enable automatic reveal. When enabled, the server reveals once every required voter has submitted a numeric estimate or `Need context`; spectators are excluded.
 - Leader controls are grouped in a Round controls panel: action buttons together, waiting status below them, and automatic reveal in a separate settings row.
 - Starting a new vote round is done with `Start vote`; there is no separate `Restart` button in the UI.
 - The first round is 1; starting after reveal increments it. Starting during voting and revealing outside voting return 409.
@@ -69,11 +70,12 @@ Current behavior:
 - Active room count is capped at 10000 by default.
 - The landing screen shows total rooms created, persisted separately in a file-backed SQLite counter. Only this aggregate survives restarts; rooms and votes remain in memory. Compose mounts a named volume for the counter.
 - The UI supports light and dark themes and stores the preference in browser local storage.
+- Snowflakes fall behind the app during December, using the visitor's local date; the effect starts on December 1 and stops on January 1. Reduced-motion preferences hide it.
 - Cards use portrait playing-card proportions, a single centered estimate, and patterned burgundy backs. Higher estimates make only the estimate numeral grow and glow; dark mode uses subdued dark faces and backs.
 - Room reveal turns participant cards over with a 3D flip; reduced-motion preferences disable the transition. Own selected estimates remain visible before reveal.
 - The reveal transition must animate in current Chrome and Safari. Version static assets with a query parameter so a deployed UI change cannot combine stale JavaScript or CSS with a new counterpart.
 - When a participant chooses an estimate, only the card on their own participant tile turns over to reveal that estimate; other participants continue to see a card back until the leader reveals the round.
-- Reveal triggers confetti only when at least two participants all submitted the same numeric vote; abstentions and missing votes prevent celebration.
+- Reveal triggers confetti only when at least two voters all submitted the same numeric vote; abstentions and missing votes prevent celebration. Spectators do not affect it.
 - `/health` under the configured prefix checks both databases; Docker includes a healthcheck.
 
 ## Source Of Truth
@@ -83,9 +85,10 @@ When making changes, keep these files aligned:
 - [instructions.md](/Users/risboo6909/ScrumPoker/instructions.md): English agent-facing product and engineering spec
 - [src/app.py](/Users/risboo6909/ScrumPoker/src/app.py): backend API, room lifecycle, WebSocket broadcast
 - [src/counter.py](/Users/risboo6909/ScrumPoker/src/counter.py): persistent aggregate counter
-- [tests/](/Users/risboo6909/ScrumPoker/tests): Python regression tests
+- [tests/](/Users/risboo6909/ScrumPoker/tests): Python regression tests and JavaScript date-boundary test
 - [templates/index.html](/Users/risboo6909/ScrumPoker/templates/index.html): server-rendered shell and labels
 - [static/app.js](/Users/risboo6909/ScrumPoker/static/app.js): frontend state and user actions
+- `static/snow.js`: seasonal snowfall and local date boundaries
 - [static/styles.css](/Users/risboo6909/ScrumPoker/static/styles.css): visual theme, animation, and layout
 - [Dockerfile](/Users/risboo6909/ScrumPoker/Dockerfile) and [docker-compose.yml](/Users/risboo6909/ScrumPoker/docker-compose.yml): runtime packaging
 
@@ -123,6 +126,6 @@ When making changes, keep these files aligned:
 ## Verification
 
 - Start from the project root with `python -m src.app`.
-- Run `python -m unittest discover -s tests -t . -v` and `node --check static/app.js` before deployment.
+- Run `python -m unittest discover -s tests -t . -v`, `node --test tests/test_snow.cjs`, `node --check static/app.js`, and `node --check static/snow.js` before deployment.
 - `instructions.md` is the authoritative product specification; no historical external spec is required.
 - Nginx proxy configuration is documented in README.md. Preserve the named counter volume during deployments.

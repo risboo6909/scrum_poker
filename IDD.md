@@ -19,8 +19,9 @@ This document expresses intended outcomes and constraints. It does not introduce
 | Leader | Bring the team into one session quickly. | Enter a name, create a room, and share a URL containing the room ID. |
 | Participant | Join without account setup. | Open the URL, enter a name, and appear in the room. |
 | Participant | Estimate independently. | Select or revise a card while voting; see the saved choice without exposing its numeric value to others. |
+| Spectator | Observe a session without voting. | Join by name as a spectator, follow live updates, and see revealed results. |
 | Leader | Control when discussion begins. | Start voting and reveal estimates; other participants cannot perform those actions. |
-| Leader | Reveal promptly when the room is ready. | Optionally enable automatic reveal; the server reveals after every current participant submits an estimate or abstention. |
+| Leader | Reveal promptly when the room is ready. | Optionally enable automatic reveal; the server reveals after every required voter submits an estimate or abstention, excluding spectators. |
 | Team | Understand the estimates. | See revealed cards, median, and most common vote. |
 | Leader | Continue with little friction. | Select `Start vote` again to clear previous votes and begin another cycle. |
 | Leader | Manage the room. | Remove non-leaders or end the session and return to the landing screen. |
@@ -41,6 +42,8 @@ This document expresses intended outcomes and constraints. It does not introduce
 | R9 | Expire inactive rooms and cap active rooms at 10,000 by default. | TTL cleanup, `active_room_count` |
 | R10 | Serve frontend and backend together in Docker, including deployment under `/poker` behind a reverse proxy. | Flask routes, base-path handling, Compose |
 | R11 | Support persistent light/dark theme preference, a rooms-created counter, reveal animation, and confetti. | template and frontend rendering |
+| R12 | Let spectators watch without voting or affecting voting rules and results. | `join_room`, `submit_vote`, `reveal_if_everyone_voted`, `renderParticipants` |
+| R13 | Show background snowfall during December in the visitor's local time, respecting reduced motion. | `static/snow.js`, `static/styles.css` |
 
 ## 4. Behavioral contract
 
@@ -48,11 +51,13 @@ This document expresses intended outcomes and constraints. It does not introduce
 
 A creator becomes the room leader. Visitors join through the shared URL using a name. Missing or expired room URLs show `Room not found` and disable joining before submission. Account registration is outside the intended scope.
 
+Visitors can choose `Join as spectator` to observe room updates and revealed results. Spectators have a ghost tile and cannot vote. They do not count toward the required connected voters, automatic reveal, numeric statistics, or unanimity.
+
 ### Vote independently, then reveal
 
 Only the leader starts a vote or reveals cards. During voting, participants, including the leader, may submit or replace their own estimate. Each participant sees their selected card; other participants may see voting status but must not receive the numeric estimate through the UI or backend interfaces before reveal.
 
-Starting a vote requires at least two connected participants, including the leader, enforced in both the UI and backend. While alone, the leader sees “Waiting for another participant”. Disconnecting during an active round does not cancel that round.
+Starting a vote requires at least two connected voters, including the leader, enforced in both the UI and backend. Spectators do not meet this requirement. While alone, the leader sees “Waiting for another participant”. Disconnecting during an active round does not cancel that round.
 
 Reveal displays submitted estimates and aggregate statistics. Missing votes do not become zeroes. Selecting an estimate turns over only the current participant's card, beside their own name; other participants continue to see its back until reveal. Starting another vote clears the previous selections and results. Use `Start vote` for that action; do not add an average or a dedicated Restart button unless requirements change.
 
@@ -74,7 +79,7 @@ flowchart TD
 
 Each round follows the same loop. Starting the next round clears the previous votes and increments the round number; the first round is 1. While waiting to start again, the previous results remain visible.
 
-Automatic reveal waits for votes from connected participants and the leader. A departed non-leader without a vote does not block it; an abstention counts as a response.
+Automatic reveal waits for votes from required voters, excluding spectators. A departed non-leader without a vote does not block it; an absent leader must have voted, and an abstention counts as a response.
 
 At any stage, the leader can end the room, or the room can expire through inactivity.
 
@@ -98,7 +103,7 @@ Median and most common vote are required. Current code provides these concrete r
 - Show a Left badge to everyone after a participant's last socket disconnects; keep their card and submitted vote through the current round. Reconnecting clears the badge. Starting the next round removes offline non-leaders. Departed non-leaders without votes do not block automatic reveal; the leader's vote is still required.
 - Preserve the light/dark theme preference between visits.
 - Show total rooms created on the landing screen, persisted in a separate SQLite file and reloaded across restarts. Persist only the counter, not rooms, participants, or votes. Compose uses a named volume for this file.
-- Present cards with portrait proportions, a single centered estimate and patterned burgundy backs. Higher estimates make only the estimate numeral grow and glow; dark mode uses subdued dark faces and backs. Reveal with a 3D flip, respecting reduced-motion preferences; keep the viewer’s own selection visible before reveal. Confetti requires at least two participants, all with identical numeric votes and no abstentions or missing votes.
+- Present cards with portrait proportions, a single centered estimate and patterned burgundy backs. Higher estimates make only the estimate numeral grow and glow; dark mode uses subdued dark faces and backs. Reveal with a 3D flip, respecting reduced-motion preferences; keep the viewer’s own selection visible before reveal. Confetti requires at least two voters, all with identical numeric votes and no abstentions or missing votes; spectators do not affect it.
 - Let the leader remove non-leaders and end the room. Ended or expired rooms no longer accept participation.
 
 ## 5. Constraints and non-goals
@@ -144,7 +149,7 @@ Shared room operations are serialized with a reentrant lock. Socket receive loop
 
 ## 7. Acceptance criteria
 
-Python application code lives in `src/`. Backend regression coverage is in `tests/test_room_lifecycle.py`, `tests/test_auto_reveal.py`, and `tests/test_counter.py`. For visual and multi-browser verification, use separate browser profiles so local storage and session cookies remain independent.
+Python application code lives in `src/`. Backend regression coverage is in `tests/test_room_lifecycle.py`, `tests/test_auto_reveal.py`, `tests/test_spectator.py`, and `tests/test_counter.py`; `node --test tests/test_snow.cjs` checks snowfall date boundaries. For visual and multi-browser verification, use separate browser profiles so local storage and session cookies remain independent.
 
 | Check | Expected result |
 | --- | --- |
@@ -153,6 +158,7 @@ Python application code lives in `src/`. Backend regression coverage is in `test
 | Leader permissions | Ordinary participant cannot start, reveal, kick, or end, including by submitting a public leader ID with a different or missing session cookie. |
 | Hidden votes | During voting, shared snapshots contain no numeric estimates; each authenticated viewer can access only their own selection. |
 | Vote replacement | Selecting another card replaces the participant's current vote. |
+| Spectator | Spectator sees live updates and results, cannot vote, and does not affect the start requirement, automatic reveal, or statistics. |
 | Reveal statistics | Verify odd/even medians, tied modes, unique votes, abstentions, and no numeric votes. No average appears. |
 | Next vote | `Start vote` clears prior votes and statistics and restores independent voting. No Restart button appears. |
 | Presence and removal | Socket changes update presence; kicking removes the participant and vote; ending deletes the room. |
@@ -160,5 +166,6 @@ Python application code lives in `src/`. Backend regression coverage is in `test
 | Retention and capacity | With small test settings, expired rooms disappear on cleanup and excess creation returns 503. |
 | Deployment | Page, assets, REST actions, and socket updates work at root and under `/poker`, including through Nginx. |
 | Presentation | Theme survives reload, current user has `(You)`, the counter survives process replacement, and reveal animation runs. |
+| Seasonal snowfall | Snow appears during December in the visitor's local time, stops on January 1, and is hidden with reduced motion enabled. |
 
 ## 8. Current gaps and decisions
